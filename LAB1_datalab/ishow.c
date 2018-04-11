@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+/* Declarations of some nonstandard library functions */
+long long strtoll(const char *s, char **ptr, int base);
+char *strdup(const char *s);
+
+
 /* Extract hex/decimal/or float value from string */
 static int get_num_val(char *sval, unsigned *valp) {
   char *endp;
@@ -56,8 +61,9 @@ void usage(char *fname) {
 
 int main(int argc, char *argv[])
 {
-  int i;
   unsigned uf;
+  int i;
+
   if (argc < 2)
     usage(argv[0]);
   for (i = 1; i < argc; i++) {
