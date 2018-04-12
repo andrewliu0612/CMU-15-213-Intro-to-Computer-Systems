@@ -2,15 +2,15 @@
 
 
 
-int subOK(int x, int y) {
-  /* Compare the signs of x, y and z 
-   * If +-- or -++ then overflows
-   */
-  int z = x - y;
-  int mask = 1 << 31;
-  return !(((x & mask) ^ (y & mask)) & ((x & mask) ^ (z & mask)));
+int bitParity(int x) {
+  x = x ^ (x << 16);
+  x = x ^ (x << 8);
+  x = x ^ (x << 4);
+  x = x ^ (x << 2);
+  x = x ^ (x << 1);
+  return (x >> 31) & 1;
 }
-
 int main() {
-    return 0;
+  int y = bitParity(0x80000001);
+  printf("%d\n", y);
 }

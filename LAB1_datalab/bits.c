@@ -263,7 +263,13 @@ int subOK(int x, int y) {
  *   Rating: 3
  */
 int isGreater(int x, int y) {
-  
+  /* If x, y same sign, then x-y won't overflow
+   * If x, y different sign, then trivial
+   */
+  int sign_mask = 1 << 31;
+  int same_sign = !((sign_mask & x) ^ (sign_mask & y));
+  int neg_x = ~x + 1;
+  return (same_sign & ((neg_x + y) >> 31)) | ((!same_sign) & (y >> 31));
 }
 //4
 /*
@@ -274,7 +280,12 @@ int isGreater(int x, int y) {
  *   Rating: 4
  */
 int bitParity(int x) {
-  return 2;
+  x = x ^ (x << 16);
+  x = x ^ (x << 8);
+  x = x ^ (x << 4);
+  x = x ^ (x << 2);
+  x = x ^ (x << 1);
+  return (x >> 31) & 1;
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
@@ -289,12 +300,12 @@ int bitParity(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-  return 0;
+
 }
 //float
 /* 
  * float_half - Return bit-level equivalent of expression 0.5*f for
- *   floating point argument f.
+ *   floating point argument f.   
  *   Both the argument and result are passed as unsigned int's, but
  *   they are to be interpreted as the bit-level representation of
  *   single-precision floating point values.

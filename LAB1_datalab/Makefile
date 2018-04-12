@@ -2,7 +2,7 @@
 # Makefile that builds btest and other helper programs for the CS:APP data lab
 # 
 CC = clang
-CFLAGS = -O1 -Wall -m32
+CFLAGS = -O1 -Wall -m32 -ggdb
 LIBS = -lm
 
 all: btest fshow ishow test
@@ -21,7 +21,8 @@ btestexplicit:
 	$(CC) $(CFLAGS) $(LIBS) -o btest bits.c btest.c decl.c tests.c 
 
 test: test.c
-	$(CC) -o test test.c
+	$(CC) $(CFLAGS) -o test test.c
 
 clean:
-	rm -f *.o btest fshow ishow test *~
+	rm -f *.o btest fshow ishow test *~ 
+	rm -rf *.dSYM
