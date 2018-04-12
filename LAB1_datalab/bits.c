@@ -172,7 +172,10 @@ NOTES:
  *   Rating: 1
  */
 int thirdBits(void) {
-  return 2;
+  int x = 0x49;
+  x = x | (x << 9);
+  x = x | (x << 18);
+  return x;
 }
 /*
  * isTmin - returns 1 if x is the minimum, two's complement number,
@@ -182,7 +185,8 @@ int thirdBits(void) {
  *   Rating: 1
  */
 int isTmin(int x) {
-  return 2;
+  // return !(x + x) & !(!x);
+  return !((x + x) | !x);
 }
 //2
 /* 
@@ -193,7 +197,7 @@ int isTmin(int x) {
  *   Rating: 2
  */
 int isNotEqual(int x, int y) {
-  return 2;
+  return !(!(x ^ y));
 }
 /* 
  * anyOddBit - return 1 if any odd-numbered bit in word set to 1
@@ -203,7 +207,10 @@ int isNotEqual(int x, int y) {
  *   Rating: 2
  */
 int anyOddBit(int x) {
-    return 2;
+  int y = 0xaa;
+  y = y | y << 8;
+  y = y | y << 16;
+  return !(!(x & y));
 }
 /* 
  * negate - return -x 
@@ -213,7 +220,7 @@ int anyOddBit(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+  return ~x + 1;
 }
 //3
 /* 
@@ -221,10 +228,16 @@ int negate(int x) {
  *   Example: conditional(2,4,5) = 4
  *   Legal ops: ! ~ & ^ | + << >>
  *   Max ops: 16
- *   Rating: 3
+ *   Rating: 3 
  */
 int conditional(int x, int y, int z) {
-  return 2;
+  int mask = !x;
+  mask = mask | mask << 1;
+  mask = mask | mask << 2;
+  mask = mask | mask << 4;
+  mask = mask | mask << 8;
+  mask = mask | mask << 16;
+  return (~mask & y) | (mask & z);
 }
 /* 
  * subOK - Determine if can compute x-y without overflow
@@ -235,7 +248,12 @@ int conditional(int x, int y, int z) {
  *   Rating: 3
  */
 int subOK(int x, int y) {
-  return 2;
+  /* Compare the signs of x, y and z 
+   * If +-- or -++ then overflows
+   */
+  int z = x - y;
+  int mask = 1 << 31;
+  return !(((x & mask) ^ (y & mask)) & ((x & mask) ^ (z & mask)));
 }
 /* 
  * isGreater - if x > y  then return 1, else return 0 
@@ -245,7 +263,7 @@ int subOK(int x, int y) {
  *   Rating: 3
  */
 int isGreater(int x, int y) {
-  return 2;
+  
 }
 //4
 /*
