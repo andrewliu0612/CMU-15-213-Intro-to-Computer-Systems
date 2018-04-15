@@ -300,7 +300,67 @@ int bitParity(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
+  /* Convert number to positive-1, e.g. -5 -> 4, -128 -> 127 */
+  int sign_mask = (x >> 31) & 1;
+  int result = 0;
+  int maybe_zero;
+  int first_zero;
+  int is_zero;
+  sign_mask |= sign_mask << 1;
+  sign_mask |= sign_mask << 2;
+  sign_mask |= sign_mask << 4;
+  sign_mask |= sign_mask << 8;
+  sign_mask |= sign_mask << 16;
+  x = ((~sign_mask & x) + (sign_mask & ~x)) << 1;
+  
+  /* Truncate 0 from left, and return how many bits left */
+  /* Use binary search */
+  maybe_zero = x >> 16;
+  maybe_zero = !maybe_zero;
+  maybe_zero |= maybe_zero << 1;
+  maybe_zero |= maybe_zero << 2;
+  maybe_zero |= maybe_zero << 4;
+  maybe_zero |= maybe_zero << 8;
+  result += maybe_zero & 16;
 
+  maybe_zero = x >> (24 - result);
+  maybe_zero = !maybe_zero;
+  maybe_zero |= maybe_zero << 1;
+  maybe_zero |= maybe_zero << 2;
+  maybe_zero |= maybe_zero << 4;
+  result += maybe_zero & 8;
+
+  maybe_zero = x >> (28 - result);
+  maybe_zero = !maybe_zero;
+  maybe_zero |= maybe_zero << 1;
+  maybe_zero |= maybe_zero << 2;
+  result += maybe_zero & 4;
+
+  maybe_zero = x >> (30 - result);
+  maybe_zero = !maybe_zero;
+  maybe_zero |= maybe_zero << 1;
+  result += maybe_zero & 2;
+
+  maybe_zero = x >> (31 - result);
+  maybe_zero = !maybe_zero;
+  result += maybe_zero & 1;
+
+  first_zero = (x >> 31) & 1;
+  first_zero |= first_zero << 1;
+  first_zero |= first_zero << 2;
+  first_zero |= first_zero << 4;
+  first_zero |= first_zero << 8;
+  first_zero |= first_zero << 16;
+
+  is_zero = !(x | 0);
+  is_zero |= is_zero << 1;
+  is_zero |= is_zero << 2;
+  is_zero |= is_zero << 4;
+  is_zero |= is_zero << 8;
+  is_zero |= is_zero << 16;
+
+  return ((32 - result) & ~first_zero & ~is_zero) | 
+          (32 & first_zero & ~is_zero) | (is_zero & 1);
 }
 //float
 /* 
@@ -315,7 +375,28 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned float_half(unsigned uf) {
-  return 2;
+  int exp = (uf >> 23) & 0xff;
+  int sign = (uf >> 31) & 1;
+  int frac = uf & ~(0x1ff << 23);
+  if(exp == 0x00) {
+    /* If frac ends with 11, round upwards */
+    frac += (frac & (frac >> 1) & 1);
+    /* Denormalized values, shift frac */
+    frac >>= 1;
+  } else if(exp == 0xff) {
+    /* Special values inf or nan, return self */
+  } else {
+    /* Normalized values, reduce exp */
+    exp -= 1;
+    if(exp == 0) {
+      /* If frac ends with 11, round upwards */
+      frac += (frac & (frac >> 1) & 1);
+      /* From normalized to denormalized */
+      frac >>= 1;
+      frac |= (1 << 22);
+    }
+  }
+  return 0 | (sign << 31) | (exp << 23) | frac;
 }
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -327,7 +408,8 @@ unsigned float_half(unsigned uf) {
  *   Rating: 4
  */
 unsigned float_i2f(int x) {
-  return 2;
+  // Todo
+  return 1;
 }
 /* 
  * float_f2i - Return bit-level equivalent of expression (int) f
@@ -342,5 +424,14 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 int float_f2i(unsigned uf) {
-  return 2;
+  int sign = uf & 0x80000000;
+  int exp = (uf >> 23) & 255;
+  // int frac = uf << 8 | 0x80000000;
+  int frac = (uf & 0x7fffff) | 0x800000;
+  int result;
+  if(exp < 127) return 0;
+  else if(exp >= 158) return 0x80000000;
+  else result = frac >> (158 - 8 - exp);
+  if(sign) result = ~result + 1;
+  return result;
 }
