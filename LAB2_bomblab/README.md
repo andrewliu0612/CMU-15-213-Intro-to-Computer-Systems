@@ -13,7 +13,7 @@
     Input 2 integers. The first integer has to be below or equal 0xe, and the second integer should be 0. Phase 4 calls subroutine func4, whose return value should be 0, requiring first integer to be 7. 
 
 ### Phase 5:
-    
+    Input a string of length 6. Each char % 16 represents an offset in string at 0x4024b0("maduiersnfotvbyl"). The offset has to match string at 0x6038c0("flyers"). 
 
 ### Phase 6:
-
+    Input 6 distinct numbers between 1-6. Form a singly-linked list that is sorted, based on the order of input.
