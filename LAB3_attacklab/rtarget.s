@@ -968,7 +968,10 @@ printf (const char *__restrict __fmt, ...)
 
 00000000004019a7 <addval_219>:
   4019a7:	8d 87 51 73 58 90    	lea    -0x6fa78caf(%rdi),%eax
-  4019ad:	c3                   	retq   
+  4019ad:	c3                   	retq    
+# 58        popq %rax
+# 90        no op
+# c3        retq
 
 00000000004019ae <setval_237>:
   4019ae:	c7 07 48 89 c7 c7    	movl   $0xc7c78948,(%rdi)
@@ -984,11 +987,17 @@ printf (const char *__restrict __fmt, ...)
 
 00000000004019c3 <setval_426>:
   4019c3:	c7 07 48 89 c7 90    	movl   $0x90c78948,(%rdi)
-  4019c9:	c3                   	retq   
+  4019c9:	c3                   	retq
+# 48 89 c7  movq %rax, %rdi
+# 90        no op
+# c3        retq
 
 00000000004019ca <getval_280>:
   4019ca:	b8 29 58 90 c3       	mov    $0xc3905829,%eax
   4019cf:	c3                   	retq   
+# 58        popq %rax
+# 90        no-op
+# c3        ret
 
 00000000004019d0 <mid_farm>:
   4019d0:	b8 01 00 00 00       	mov    $0x1,%eax
@@ -1125,6 +1134,9 @@ printf (const char *__restrict __fmt, ...)
 0000000000401aab <setval_350>:
   401aab:	c7 07 48 89 e0 90    	movl   $0x90e08948,(%rdi)
   401ab1:	c3                   	retq   
+# 48 89 e0  movq %rsp, %rax
+# 90        no-op
+# c3        ret
 
 0000000000401ab2 <end_farm>:
   401ab2:	b8 01 00 00 00       	mov    $0x1,%eax

