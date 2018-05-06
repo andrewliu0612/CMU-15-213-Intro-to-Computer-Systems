@@ -124,7 +124,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             <img src="Note_Images/arrays.png" width="80%">
         * Nested 2D arrays: `int A[R][C]`
             <img src="Note_Images/array_nested.png" width="80%">
-        * Multi-level 2D arrays:
+        * Multi-level 2D arrays:  
             <img src="Note_Images/array_multilevel.png" width="80%">
     * Structs
         * Represented as block of memory
