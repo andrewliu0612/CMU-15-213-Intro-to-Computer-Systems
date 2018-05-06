@@ -132,9 +132,9 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * Fields are ordered according to declaration
         * Alignment:  
             * Within struct: Each element has alignment requirement K, where K is the size of this element
-            <img src="Note_Images/alignment.png" width="80%">  
+                <img src="Note_Images/alignment.png" width="80%">  
             * Overall: Each struct has alignment requirement K, where K is the largest alignment of any element in struct
-            <img src="Note_Images/alignment_overall.png" width="80%">  
+                <img src="Note_Images/alignment_overall.png" width="80%">  
             * To save space, put large data types first
     * Float operations
         * Arguments passed in `%xmm0`, `%xmm1`, ...
