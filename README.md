@@ -90,7 +90,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * Use `-fno-if-conversion` flag to supress implicit conversion
     * Switch statements
         * Jump table structure  
-        <img src="Note_Images/jump_table.png" width="80%">
+            <img src="Note_Images/jump_table.png" width="80%">  
         * Make use of "fall through"
 * Procedures
     * Passing control
