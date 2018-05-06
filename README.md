@@ -7,7 +7,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Word size equals length of pointer datatype
 * Bit-level operations
 * Signed/Unsigned conversions  
-    <img src="Note_Images/signed/unsigned_conversion.png">
+    ![](Note_Images/signed/unsigned_conversion.png)
 
 
 ## IEEE 754
