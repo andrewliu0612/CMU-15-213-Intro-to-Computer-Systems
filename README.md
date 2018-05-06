@@ -40,7 +40,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * Registers  
     * Can reference low-order 4 bytes (backwards compatibility)
     * `%rsp` is stack top, others are general-purpose  
-    <img src="Note_Images/registers.png" width="50%">
+        <img src="Note_Images/registers.png" width="50%">  
     * `%rip` is instruction pointer (not listed)  
     * A register for implicitly-set condition codes
 
