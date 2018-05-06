@@ -6,9 +6,11 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * char, short, int, long, float, double, pointer
     * Word size equals length of pointer datatype
 * Bit-level operations
-* Signed/Unsigned conversions  
-    ![](Note_Images/signed/unsigned_conversion.png)
-
+* Signed / unsigned conversion
+* Byte ordering
+    * Big Endian: Sun, PPC Mac, Internet
+    * Little Endian: x86, ARM
+    ![](Note_Images/endian.png)
 
 ## IEEE 754
 
