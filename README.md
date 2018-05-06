@@ -80,7 +80,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Dynamic linked libraries
         * Linking occurs at runtime
         * Does not take too much disk space  
-    <img src="Note_Images/compilation.png" width="70%">
+    <img src="Note_Images/compilation.png" width="70%">  
 * Controls
     * Jumping
         * `jmp`, `je`, `jne`, `js` ...
@@ -121,22 +121,24 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * Data
     * Arrays  
         * 1D arrays  
-            <img src="Note_Images/arrays.png" width="80%">
+            <img src="Note_Images/arrays.png" width="80%">  
         * Nested 2D arrays: `int A[R][C]`
-            <img src="Note_Images/array_nested.png" width="80%">
+            <img src="Note_Images/array_nested.png" width="80%">  
         * Multi-level 2D arrays:  
-            <img src="Note_Images/array_multilevel.png" width="80%">
+            <img src="Note_Images/array_multilevel.png" width="80%">  
     * Structs
         * Represented as block of memory
-            <img src="Note_Images/struct.png" width="80%">
+            <img src="Note_Images/struct.png" width="80%">  
         * Fields are ordered according to declaration
         * Alignment:  
             * Within struct: Each element has alignment requirement K, where K is the size of this element
-            <img src="Note_Images/alignment.png" width="80%">
+            <img src="Note_Images/alignment.png" width="80%">  
             * Overall: Each struct has alignment requirement K, where K is the largest alignment of any element in struct
-            <img src="Note_Images/alignment_overall.png" width="80%">
+            <img src="Note_Images/alignment_overall.png" width="80%">  
             * To save space, put large data types first
     * Float operations
         * Arguments passed in `%xmm0`, `%xmm1`, ...
         * Result returned in `%xmm0`
         * Different mov instructions are used to move floats
+* Address space
+    * Currently using 47-bit addresses (highest address of 0x7fffffffffff)
