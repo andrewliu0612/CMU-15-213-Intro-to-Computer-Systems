@@ -9,8 +9,8 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * Signed / unsigned conversion
 * Byte ordering
     * Big Endian: Sun, PPC Mac, Internet
-    * Little Endian: x86, ARM
-    ![](Note_Images/endian.png)
+    * Little Endian: x86, ARM  
+    <img src="Note_Images/endian.png" width="60%">
 
 ## IEEE 754
 
