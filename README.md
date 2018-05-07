@@ -142,3 +142,18 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * Different mov instructions are used to move floats
 * Address space
     * Currently using 47-bit addresses (highest address of 0x7fffffffffff)
+    * Maximum stack size of 8MB on most machines  
+        <img src="Note_Images/memory.png" width="80%">  
+* Vulnerablities
+    * Buffer overflow
+        * Triggered by functions manipulating strings of arbitrary length
+        * `gets`, `strcpy`, `strcat`, `scanf`, `fscanf`, `sscanf`
+    * Return-oriented programming (ROT)
+        * Make use of "gadgets" in text segment  
+        * Trigger with `ret` instruction  
+            <img src="Note_Images/rop.png" width="60%">  
+* Protection
+    * Use routines limiting string lengths (user-level)
+    * Randomized stack offsets
+    * Nonexecutable code segments
+    * Stack canaries
