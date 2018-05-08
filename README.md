@@ -69,15 +69,15 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * `popq dest`
     * `incr dest`
 * Compiler, Assembler, Linker & Loader  
-    * Compiler
+    1. Compiler
         * Translates C files (.c) into assembly files (.s)
-    * Assembler
+    2. Assembler
         * Translates assembly files (.s) into object files (.o)
         * Missing linkage between compilation units
-    * Linker
+    3. Linker
         * Resolve references between object files
         * Combine with static libraries (malloc, printf, etc)
-    * Dynamic linked libraries
+    4. Dynamic linked libraries
         * Linking occurs at runtime
         * Does not take too much disk space  
     <img src="Note_Images/compilation.png" width="70%">  
@@ -119,14 +119,14 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Memory management
     * ABI: Application Binary Interface
 * Data
-    * Arrays  
+    1. Arrays  
         * 1D arrays  
             <img src="Note_Images/arrays.png" width="80%">  
         * Nested 2D arrays: `int A[R][C]`
             <img src="Note_Images/array_nested.png" width="80%">  
         * Multi-level 2D arrays:  
             <img src="Note_Images/array_multilevel.png" width="80%">  
-    * Structs
+    2. Structs
         * Represented as block of memory
             <img src="Note_Images/struct.png" width="80%">  
         * Fields are ordered according to declaration
@@ -136,24 +136,76 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             * Overall: Each struct has alignment requirement K, where K is the largest alignment of any element in struct
                 <img src="Note_Images/alignment_overall.png" width="80%">  
             * To save space, put large data types first
-    * Float operations
+    3. Float operations
         * Arguments passed in `%xmm0`, `%xmm1`, ...
         * Result returned in `%xmm0`
         * Different mov instructions are used to move floats
 * Address space
     * Currently using 47-bit addresses (highest address of 0x7fffffffffff)
     * Maximum stack size of 8MB on most machines  
-        <img src="Note_Images/memory.png" width="80%">  
+        <img src="Note_Images/memory.png" width="60%">  
 * Vulnerablities
-    * Buffer overflow
+    1. Buffer overflow
         * Triggered by functions manipulating strings of arbitrary length
         * `gets`, `strcpy`, `strcat`, `scanf`, `fscanf`, `sscanf`
-    * Return-oriented programming (ROT)
+    2. Return-oriented programming (ROT)
         * Make use of "gadgets" in text segment  
         * Trigger with `ret` instruction  
             <img src="Note_Images/rop.png" width="60%">  
 * Protection
-    * Use routines limiting string lengths (user-level)
-    * Randomized stack offsets
-    * Nonexecutable code segments
-    * Stack canaries
+    1. Use routines limiting string lengths (user-level)
+    2. Randomized stack offsets
+    3. Nonexecutable code segments
+    4. Stack canaries
+* Optimization by programmer
+    1. Code motion: Reduce frequency of computations performed   
+        <img src="Note_Images/code_motion.png" width="80%">   
+        GCC will do this with -O1  
+    2. Reduction in strength: Reduce costly operation with simpler one  
+        <img src="Note_Images/reduction_in_strength.png" width="80%">  
+        Here, int mul requires 3 clock cycles, int add requires 1 clock cycle 
+    3. Share common subexpressions  
+        <img src="Note_Images/share_common_subexpressions.png" width="80%">  
+* Optimization blockers
+    1. Procedures: Seen as a "black box"
+        * Procedures may have side effects
+        * May not return same result with same argument
+        * Fix: Use inline functions (GCC with -O1 within single file)
+    2. Memory aliasing: Two memory references specify single location
+        * The following code does memory load and store every time, because compiler assume possibility of memory aliasing:  
+            <img src="Note_Images/memory_aliasing.png" width=80%>  
+        * Load and store take multiple clock cycles
+        * Easily caused by direct access to storage structures
+        * Fix: Define local variable to tell compiler not to check for aliasing
+            <img src="Note_Images/aliasing_fix.png" width=60%>  
+        * Get in habit of introducing local variables accumulating within loops
+* Optimization (by programmer) limitations
+    1. Most performed within procedures. Newer versions of GCC do interprocedual optimization, but not between codes in different files
+    2. Based on static information
+    3. Conservative: Must not change program behavior
+* Instruction-level parallelism
+    * Superscalar processor: Issue and execute multuple instructions per cycle, and instructions are scheduled dynamically
+    * Some instruction have >1 clock cycle latency, but can be pipelined:  
+        <img src="Note_Images/pipeline.png" width=80%>  
+    * Unrolling
+        * Break sequential dependency to break through latency bound (to approach throughput bound)  
+            <img src="Note_Images/unrolling.png" width=40%>  
+            ```
+            for(int i = 0; i < limit; ++i)
+                x = x + d[i];
+            ```
+            can be optimized to:
+            ```
+            for(int i = 0; i < limit; i += 2)
+                x = (x + d[i]) + d[i + 1];
+            ```
+            but to break sequential dependency:
+            ```
+            for(int i = 0; i < limit; i += 2)
+                x = x + (d[i] + d[i + 1]);
+            ``` 
+        * adding separate accumulators
+    * Branch prediction
+        * Backward branches are often loops, predict taken
+        * Forward branches are often if, predict not taken
+        * Average better than 95% accuracy
