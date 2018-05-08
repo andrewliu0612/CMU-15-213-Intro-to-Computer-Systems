@@ -186,10 +186,10 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * Instruction-level parallelism
     * Superscalar processor: Issue and execute multuple instructions per cycle, and instructions are scheduled dynamically
     * Some instruction have >1 clock cycle latency, but can be pipelined:  
-        <img src="Note_Images/pipeline.png" width=80%>  
+        <img src="Note_Images/pipeline.png" width=70%>  
     * Unrolling
         * Break sequential dependency to break through latency bound (to approach throughput bound)  
-            <img src="Note_Images/unrolling.png" width=40%>  
+            <img src="Note_Images/unrolling.png" width=30%>  
             ```
             for(int i = 0; i < limit; ++i)
                 x = x + d[i];
