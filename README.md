@@ -157,6 +157,8 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     2. Randomized stack offsets
     3. Nonexecutable code segments
     4. Stack canaries
+
+### Code optimization
 * Optimization by programmer
     1. Code motion: Reduce frequency of computations performed   
         <img src="Note_Images/code_motion.png" width="80%">   
