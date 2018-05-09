@@ -1,7 +1,7 @@
 # CMU-15-213-Intro-to-Computer-Systems
 Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 
-## Integer representation
+# Integer representation
 * Data types
     * char, short, int, long, float, double, pointer
     * Word size equals length of pointer datatype
@@ -13,7 +13,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     <img src="Note_Images/endian.png" width="50%">
 
 
-## IEEE 754
+# IEEE 754
 * Numeric form
     $(-1)^sM2^E$
 * Encoding
@@ -28,7 +28,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     <img src="Note_Images/ieee754range.png" width="60%">
 * Roundings
 
-## x86-64
+# x86-64
 * History
     * 8086 -> 386 -> Pentium 4E -> Core 2 -> Core i7
     * IA32 -> x86-64
@@ -44,7 +44,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * `%rip` is instruction pointer (not listed)  
     * A register for implicitly-set condition codes
 
-## Machine-level Programming
+# Machine-level Programming
 * Addressing modes
     * Normal: `(R)` -> `Mem[Reg[R]]`
     * Displacement: `D(R)` -> `Mem[Reg[R] + D]`
@@ -158,7 +158,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     3. Nonexecutable code segments
     4. Stack canaries
 
-## Code optimization
+# Code optimization
 * Optimization by programmer
     1. Code motion: Reduce frequency of computations performed   
         <img src="Note_Images/code_motion.png" width="80%">   
