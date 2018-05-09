@@ -121,7 +121,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * Data
     1. Arrays  
         * 1D arrays  
-            <img src="Note_Images/arrays.png" width="80%">  
+            <img src="Note_Images/arrays.png" width="60%">  
         * Nested 2D arrays: `int A[R][C]`
             <img src="Note_Images/array_nested.png" width="80%">  
         * Multi-level 2D arrays:  
