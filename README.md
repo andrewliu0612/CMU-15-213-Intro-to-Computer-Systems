@@ -10,7 +10,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * Byte ordering
     * Big Endian: Sun, PPC Mac, Internet
     * Little Endian: x86, ARM  
-    <img src="Note_Images/endian.png" width="60%">
+    <img src="Note_Images/endian.png" width="50%">
 
 
 ## IEEE 754
@@ -20,12 +20,12 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * s: sign bit
     * exp: E
     * frac: M  
-    <img src="Note_Images/ieee754.png" width="60%">
+    <img src="Note_Images/ieee754.png" width="50%">
 * Three kinds of values
     * Denormalized: exp = 0
     * Normalized: 0 < exp < 11..11
     * Special: exp = 11...11 (e.g. inf & NaN)  
-    <img src="Note_Images/ieee754range.png" width="80%">
+    <img src="Note_Images/ieee754range.png" width="60%">
 * Roundings
 
 ## x86-64
@@ -36,7 +36,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Case study: Core-i7 6700K Skylake
         * Shared L3 cache (LLC)
         * Hyper-Threading: Shared caches, buses & ALUs
-        <img src="Note_Images/corei7.png" width="80%">
+        <img src="Note_Images/corei7.png" width="70%">
 * Registers  
     * Can reference low-order 4 bytes (backwards compatibility)
     * `%rsp` is stack top, others are general-purpose  
@@ -80,7 +80,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     4. Dynamic linked libraries
         * Linking occurs at runtime
         * Does not take too much disk space  
-    <img src="Note_Images/compilation.png" width="70%">  
+    <img src="Note_Images/compilation.png" width="50%">  
 * Controls
     * Jumping
         * `jmp`, `je`, `jne`, `js` ...
@@ -108,8 +108,8 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * IA-32 pass all arguments in stack
         * Concept of stack frames:
             * Marked by `%rbp` (optional) and `%rsp`
-            * No addition mechanism for recursion is needed  
-            <img src="Note_Images/stack_frame.png" width="80%">
+            * No additional mechanism for recursion is needed  
+            <img src="Note_Images/stack_frame.png" width="60%">
         * Register saving conditions
             * Caller saved
                 * `%rdi`, `%rsi`, `%rdx`, `%rcx`, `%r8`, `%r9`, `%rax`, `%r10`, `%r11`
