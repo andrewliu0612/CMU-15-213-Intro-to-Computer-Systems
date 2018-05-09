@@ -237,12 +237,12 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Concept of locality  
         <img src="Note_Images/locality.png" width=60%>  
     * General organization  
-        <img src="Note_Images/address.png" width=25%>
-        <img src="Note_Images/organization.png" width=70%>  
+        <img src="Note_Images/address.png" width=20%>
+        <img src="Note_Images/organization.png" width=50%>  
         1. Direct mapped cache has (E / associativity = 1)  
-            <img src="Note_Images/direct_mapped_cache.png" width=70%>  
+            <img src="Note_Images/direct_mapped_cache.png" width=50%>  
         2. E-way set associative cache (Here E / associativity = 2)  
-            <img src="Note_Images/e_way_associative_cache.png" width=70%>  
+            <img src="Note_Images/e_way_associative_cache.png" width=50%>  
     * Metrics
         1. Miss rate
         2. Hit time
