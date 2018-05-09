@@ -211,3 +211,27 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * Backward branches are often loops, predict taken
         * Forward branches are often if, predict not taken
         * Average better than 95% accuracy
+
+# Memory
+* Storage technologies
+    1. RAMs
+        * Volatile: SRAM & DRAM (caches & main memories)
+        * Nonvolatile: ROM, PROM, EPROM, EEPROM (firmware, ssd & disk caches)
+    2. Rotating disks
+    3. SSDs
+        * Page can be written only after its block has been erased
+* Locality
+    * Temporal locality
+    * Spatial locality
+* Hierarchy  
+    <img src="Note_Images/hierarchy.png" width=70%>  
+* Caches
+    * Each level in hierarchy serves as cache for the level below
+    * Types of cache misses
+        1. Cold miss: "Warm up" cache
+        2. Capacity miss: Working set larger than cache size
+        3. Conflict miss: Limited by positioning restrictions imposed by hardware
+    * Examples of cache  
+        <img src="Note_Images/cache_examples.png" width=70%>  
+
+
