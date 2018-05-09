@@ -252,7 +252,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         2. Minimize the misses in inner loops
         3. Try to maximize spatial locality by reading objects sequentially with stride 1
         4. Try to maximize temporal locality by using an object as often as possible once it's read from memory
-    * Example of matrixmultiplication
+    * Example of matrix multiplication
         * In which order to arrange the loops? Do miss rate analysis!
         * It turns out: kij/ikj > ijk/jik > jki/kji
         * Use blocking: multiplying by sub-matrices
