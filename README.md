@@ -233,5 +233,26 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         3. Conflict miss: Limited by positioning restrictions imposed by hardware
     * Examples of cache  
         <img src="Note_Images/cache_examples.png" width=70%>  
-
-
+* Cache memories
+    * Concept of locality  
+        <img src="Note_Images/locality.png" width=60%>  
+    * General organization  
+        <img src="Note_Images/address.png" width=25%>
+        <img src="Note_Images/organization.png" width=70%>  
+        1. Direct mapped cache has (E / associativity = 1)  
+            <img src="Note_Images/direct_mapped_cache.png" width=70%>  
+        2. E-way set associative cache (Here E / associativity = 2)  
+            <img src="Note_Images/e_way_associative_cache.png" width=70%>  
+    * Metrics
+        1. Miss rate
+        2. Hit time
+        3. Miss penalty
+    * Write cache-friendly code
+        1. Make the common cases go first
+        2. Minimize the misses in inner loops
+        3. Try to maximize spatial locality by reading objects sequentially with stride 1
+        4. Try to maximize temporal locality by using an object as often as possible once it's read from memory
+    * Example of matrixmultiplication
+        * In which order to arrange the loops? Do miss rate analysis!
+        * It turns out: kij/ikj > ijk/jik > jki/kji
+        * Use blocking: multiplying by sub-matrices
