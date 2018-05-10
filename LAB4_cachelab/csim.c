@@ -5,8 +5,6 @@
  * May 9th, 2018
  */
 
-// TODO: Invalid arg
-
 
 #include "cachelab.h"
 #include <stdio.h>
