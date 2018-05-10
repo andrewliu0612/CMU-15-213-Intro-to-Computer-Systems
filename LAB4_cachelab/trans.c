@@ -24,14 +24,71 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
  */
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N]) {
-    int i, j, tmp;
+    /* 32 sets, each of size 32 bytes */
+    int i, j, k, l, diag, tmp;
 
-    for (i = 0; i < N; i++) {
-        for (j = 0; j < M; j++) {
-            tmp = A[i][j];
-            B[j][i] = tmp;
+    /* Use 8 * 8 blocking */
+    if(M == 32 && N == 32) {
+        for(i = 0; i < N; i += 8) {
+            for(j = 0; j < M; j += 8) {
+                for(k = 0; k < 8; ++k) {
+                    for(l = 0; l < 8; ++l) {
+                        if(i + k == j + l) {
+                            diag = i + k;
+                            continue;
+                        }
+                        B[j + l][i + k] = A[i + k][j + l];
+                    }
+                    if(i == j) 
+                        B[diag][diag] = A[diag][diag];
+                }
+            }
         }
-    }  
+    }
+
+    else if(M ==61 && N == 67) {
+        for(int i = 0; i < N; i += 16) {
+            for(int j = 0; j < M; j += 16) {
+                for(int k = i; k < i + 16 && k < N; ++k) {
+                    int temp_position = -1;
+                    int temp_value;
+                    for(l = j; l < j + 16 && l < M; ++l) {
+                        if(k == l) {
+                            temp_position = l;
+                            temp_value = A[temp_position][temp_position];
+                            continue;
+                        }
+                        tmp = A[k][l];
+                        B[l][k] = tmp;
+                    }
+                    if(temp_position != -1) {
+                        B[temp_position][temp_position] = temp_value;
+                    }
+                }
+            }
+        }
+    }
+
+    else {
+        for(i = 0; i < N; i += 4) {
+            for(j = 0; j < M; j += 4) {
+                for(k = 0; k < 4; ++k) {
+                    int is_diag = 0;
+                    for(l = 0; l < 4; ++l) {
+                        if(i + k == j + l) {
+                            diag = i + k;
+                            is_diag = 1;
+                            continue;
+                        }
+                        B[j + l][i + k] = A[i + k][j + l];
+                    }
+                    if(is_diag) 
+                        B[diag][diag] = A[diag][diag];
+                }
+            }
+        }
+    }
+
 }
 
 /* 
