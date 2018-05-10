@@ -5,6 +5,8 @@
  * May 9th, 2018
  */
 
+// TODO: Invalid arg
+
 
 #include "cachelab.h"
 #include <stdio.h>
@@ -26,11 +28,18 @@ struct globalArgs_t {
 
 /* Cache block */
 typedef struct {
-    int valid;          /* valid bit */
-    long long tag;      /* tag */
-    char *data;         /* cached data, requires malloc */
-    unsigned long long time_updated;    /* Last update time for LRU */
+    int valid;          /* valid bit 0/1 */
+    unsigned long tag;  /* tag */
+    // char *data;         /* cached data, requires malloc */
+    unsigned long time_updated;     /* Last update time for LRU */
 } cache_block;
+
+cache_block *cache;         /* Cache */
+FILE *fp;                   /* Trace file */
+unsigned long tag_mask = 0; /* Masks */
+unsigned long set_mask = 0;
+unsigned long offset_mask = 0;
+enum { BUF_SIZE = 64 }; /* Buffer for input */
 
 
 void print_usage() {
@@ -49,9 +58,138 @@ void print_usage() {
 }
 
 
-/* Simulated LRU */
-void simulate(int *dest) {
+/* Cache initialization */
+void cache_init() {
+    /* Init cache as 1-d array */
+    int num_blocks = (1 << globalArgs.s) * globalArgs.E * (1 << globalArgs.b);
+    cache = (cache_block *)calloc(num_blocks, sizeof(cache_block));                
+    /* Init file ptr */
+    fp = fopen(globalArgs.inputFile, "r");
+    /* Init masks */
+    offset_mask = (1ULL << globalArgs.b) - 1;
+    set_mask = ((1ULL << (globalArgs.b + globalArgs.s)) - 1) ^ offset_mask;
+    tag_mask = 0xffffffffffffffff - offset_mask - set_mask;
+}
 
+unsigned long get_tag(unsigned long addr) {
+    return (addr & tag_mask) >> (globalArgs.s + globalArgs.b);
+}
+unsigned long get_set(unsigned long addr) {
+    return (addr & set_mask) >> globalArgs.b;
+}
+unsigned long get_offset(unsigned long addr) {
+    return addr & offset_mask;
+}
+
+/* Access memory, hit->0, cold miss->1, miss->2*/
+int access_mem(unsigned long addr, int size, int type, int time) {
+    unsigned long tag = get_tag(addr);
+    unsigned long set = get_set(addr);
+    // unsigned long offset = get_offset(addr);
+    int first_empty = -1;       /* First empty slot */
+    int lru_time = 0x7fffffff;  /* Last time victim used in this set */
+    int lru_pos = -1;           /* Position of victim in this set */
+    
+    /* Loop through set */
+    for(int i = 0; i < globalArgs.E; ++i) {
+        /* Cache hit */
+        if(cache[set * globalArgs.E + i].tag == tag && 
+                cache[set * globalArgs.E + i].valid) {
+            cache[set * globalArgs.E + i].time_updated = time;
+            if(globalArgs.verbosity) {
+                printf("hit ");
+                /* If type is M, second access must hit */
+                if(type == 'M')
+                    printf("hit \n");
+                else
+                    printf("\n");
+            }
+            return 0;
+        }
+        /* Detect empty slot */
+        else if(cache[set * globalArgs.E + i].valid == 0) {
+            first_empty = i;
+        }
+        /* Find LRU slot */
+        else if(cache[set * globalArgs.E + i].time_updated < lru_time) {
+            lru_time = cache[set * globalArgs.E + i].time_updated;
+            lru_pos = i;
+        }
+    }
+
+    /* Cold miss */
+    if(first_empty != -1) {
+        cache[set * globalArgs.E + first_empty].valid = 1;
+        cache[set * globalArgs.E + first_empty].tag = tag;
+        cache[set * globalArgs.E + first_empty].time_updated = time;
+        if(globalArgs.verbosity) {
+            printf("miss ");
+            /* If type is M, second access must hit */
+            if(type == 'M')
+                printf("hit \n");
+            else
+                printf("\n");
+        }
+        return 1;
+    }
+    /* Capacity miss, need eviction */
+    else {
+        cache[set * globalArgs.E + lru_pos].tag = tag;
+        cache[set * globalArgs.E + lru_pos].time_updated = time;
+        if(globalArgs.verbosity) {
+            printf("miss eviction ");
+            if(type == 'M') 
+                printf("hit \n");
+            else 
+                printf("\n");
+        }
+        return 2;
+    }
+}
+
+/* Simulated LRU */
+void run(int *dest) {
+    char buf[BUF_SIZE];         /* Input buffer */
+    unsigned long addr;         /* Address accessed */
+    int size;                   /* Size of access */
+    char type;                  /* Type of access */
+    int time = 0;               /* Time for LRU */
+    
+    while(fgets(buf, BUF_SIZE, fp)) {
+        /* Ignore instruction cache */
+        if(buf[0] == 'I') 
+            continue;
+        /* Parse line */
+        int delimiter = 0;
+        while(buf[delimiter] != ',')
+            delimiter++;
+        buf[delimiter] = 0;
+        type = buf[1];
+        addr = strtol(buf + 3, NULL, 16);
+        size = atoi(buf + delimiter + 1);
+        if(globalArgs.verbosity) {
+            printf("%c %lx,%d ",type, addr, size);
+        }
+        switch(access_mem(addr, size, type, time++)) {
+            case 0:
+                dest[0]++;
+                break;
+            case 2:
+                dest[2]++;
+                /* Fall through */
+            case 1:
+                dest[1]++;
+        }
+        /* If type is M, second ref must be hit */
+        if(type == 'M')
+            dest[0]++;
+    }
+}
+
+/* Termination */
+void cache_exit() {
+    free(cache);
+    fclose(fp);
 }
 
 
@@ -102,8 +240,10 @@ int main(int argc, char **argv) {
         return 0;
     }
 
-    int dest[3];
-    simulate(dest);
+    int dest[3] = {0};      /* Hit, miss and evic count */
+    cache_init();
+    run(dest);
+    cache_exit();
     printSummary(dest[0], dest[1], dest[2]);
     return 0;
 }
