@@ -77,15 +77,11 @@ unsigned long get_tag(unsigned long addr) {
 unsigned long get_set(unsigned long addr) {
     return (addr & set_mask) >> globalArgs.b;
 }
-unsigned long get_offset(unsigned long addr) {
-    return addr & offset_mask;
-}
 
 /* Access memory, hit->0, cold miss->1, miss->2*/
 int access_mem(unsigned long addr, int size, int type, int time) {
     unsigned long tag = get_tag(addr);
     unsigned long set = get_set(addr);
-    // unsigned long offset = get_offset(addr);
     int first_empty = -1;       /* First empty slot */
     int lru_time = 0x7fffffff;  /* Last time victim used in this set */
     int lru_pos = -1;           /* Position of victim in this set */
@@ -231,10 +227,10 @@ int main(int argc, char **argv) {
                 break;
         }
     }
-
-    /* Check for mandatory options */
-    if(globalArgs.s == -1 || globalArgs.E == -1 ||
-            globalArgs.b == -1 || globalArgs.inputFile == NULL) {
+ 
+    /* Check for mandatory options and constrains */
+    if(globalArgs.s <= 0 || globalArgs.E <= 0 ||
+            globalArgs.b <= 0 || globalArgs.inputFile == NULL) {
         printf("%s: Missing required command line argument\n", argv[0]);
         print_usage();
         return 0;
