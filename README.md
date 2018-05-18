@@ -294,8 +294,8 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     3. Shared object file (.so file or .dll file)
 * ELF format (Executable and Linkable Format)  
     * All 3 object files use ELF format  
-    <img src="Note_Images/elf.png" width=70%>
-    <img src="Note_Images/elf_2.png" width=40%>  
+    <img src="Note_Images/elf.png" width=65%>
+    <img src="Note_Images/elf_2.png" width=35%>  
 * Static libraries (.a archive files)
     * Concatenate related relocatable object files into a single file with an index (called an archive)
     * During linking, only referenced .o files are linked
