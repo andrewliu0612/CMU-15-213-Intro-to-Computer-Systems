@@ -238,11 +238,11 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         <img src="Note_Images/locality.png" width=60%>  
     * General organization  
         <img src="Note_Images/address.png" width=20%>
-        <img src="Note_Images/organization.png" width=50%>  
+        <img src="Note_Images/organization.png" width=50%>  ·
         1. Direct mapped cache has (E / associativity = 1)  
             <img src="Note_Images/direct_mapped_cache.png" width=50%>  
         2. E-way set associative cache (Here E / associativity = 2)  
-            <img src="Note_Images/e_way_associative_cache.png" width=50%>  
+            <img src="Note_Images/e_way_associative_cache.png" width=50%>   
     * Metrics
         1. Miss rate
         2. Hit time
@@ -256,3 +256,72 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * In which order to arrange the loops? Do miss rate analysis!
         * It turns out: kij/ikj > ijk/jik > jki/kji
         * Use blocking: multiplying by sub-matrices
+
+# Linking
+* Why linkers?
+    1. Modularity
+    2. Efficiency (separate complilation)
+* Two kind of linking
+    1. Static linking
+    2. Dynamic linking
+* What does linker do?
+    1. Symbol resolution
+        * Functions, `global` vars, `static` vars
+        * Definitions are stored in __symbol table__, an array of entries (name, size, location)
+        * Three kind of symbols:
+            1. Global symbols: non-static functions and non-static vars
+            2. External symbols: defined in other modules
+            3. Local symbols: static functions and static vars
+            * Note: Do not confuse local symbols with local variables. Local variables are allocated in stack at runtime, and have nothing to do with linker. 
+        * Symbol resolution
+            * Symbols are strong or weak:
+                1. Strong: functions and initialized globals
+                2. Weak: uninitialized globals
+            * Multiple strong symbols are not allowed
+            * Choose the strong symbol over weak symbols
+            * If there are multiple weak symbols, choose arbitrary one 
+                * May cause undefined behavior over different compilers
+                * Fix: use `static` and explicit `extern` 
+    2. Relocation
+        * Merge text and data segment
+        * Relative location -> absolute location
+        * Updates symbol table
+            * Relocation entries are used to aid symbol resolving:  
+            `a: R_X86_64_32 array`
+* Three kinds of object files
+    1. Relocatable object file (.o file)
+    2. Executable object file (a.out file)
+    3. Shared object file (.so file or .dll file)
+* ELF format (Executable and Linkable Format)  
+    * All 3 object files use ELF format  
+    <img src="Note_Images/elf.png" width=70%>
+    <img src="Note_Images/elf_2.png" width=40%>  
+* Static libraries (.a archive files)
+    * Concatenate related relocatable object files into a single file with an index (called an archive)
+    * During linking, only referenced .o files are linked
+    * Command line order matters!
+        * During scan, keep a list of currently unresolved references
+        * If any entries in the unresolved list at end of scan, then error
+        * Fix: put libraries at the end of command line
+    * Commonly used libraries:
+        * `libc.a` (the C standard library)
+        * `limb.a` (the C math library)
+    * Disadvantages
+        * Duplication in storage
+        * Bug fixes require relink
+        * Fix: shared libraries
+* Shared libraries
+    * Dynamic linking can happen at:
+        1. Load time
+            * Handled by the dynamic linker
+            * `libc.so` usually dynamically linked
+        2. Run time
+            * `dlopen()` interface in linux
+* Library interpositioning
+    * Can happen at:
+        1. Compile time
+        2. Link time
+        3. Load/run time
+    * Can be used for:
+        1. Detecting memory leaks
+        2. Generating address traces
