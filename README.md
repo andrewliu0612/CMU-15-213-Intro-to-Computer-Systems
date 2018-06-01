@@ -238,7 +238,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         <img src="Note_Images/locality.png" width=60%>  
     * General organization  
         <img src="Note_Images/address.png" width=20%>
-        <img src="Note_Images/organization.png" width=50%>  ·
+        <img src="Note_Images/organization.png" width=50%>  
         1. Direct mapped cache has (E / associativity = 1)  
             <img src="Note_Images/direct_mapped_cache.png" width=50%>  
         2. E-way set associative cache (Here E / associativity = 2)  
@@ -325,3 +325,56 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Can be used for:
         1. Detecting memory leaks
         2. Generating address traces
+    
+# Exception Control Flows (ECF)
+* ECFs exists in all levels:
+    1. Exceptions (low level)
+        * Processor responses to external events
+        * Exception tables
+    2. Context switch
+    3. Signals
+    4. Nonlocal jumps
+* Exceptions  
+    <img src="Note_Images/exceptions.png" width=50%>  
+    1. Asynchronous (Interrupts)
+        * Indicated by INT pin
+        * Control flow returns to next instruction
+    2. Synchronous
+        1. Traps
+            * Intentional (syscall, breakpoints)
+            * Control flow returns to next instruction
+        2. Faults
+            * Unintentional but possibly recoverable
+            * Control flow returns to current instruction or aborts
+        3. Aborts
+            * Unintentional and unrecoverable
+* Context switches
+
+# Processes
+* From a programmer's perspective, a process can be:
+    1. Running: Executing or will be scheduled
+    2. Stopped: Suspended and will not be scheduled until further notice
+    3. Terminated: Stopped permanently (zombie)
+        * Process terminates when: 
+            1. `SIGTERM` received
+            2. Return from `main()`
+            3. Called `exit()`
+* Creating process: `fork()`
+    * `fork()` called once but returns twice
+    * `exit()` and `execve()` called once but possibly never returns
+    * Control flow can be modelled with process graphs via toposort:  
+        <img src="Note_Images/process_graph1.png" width=30%>
+        <img src="Note_Images/process_graph2.png" width=25%>
+* Reaping child processes: `wait()`
+    * Terminated processes become zombies, because its parent may use its exit status or OS tables
+    * `wait()` and `waitpid()` reap zombie child processes
+    * If parent don't reap:
+        1. If parent doesn't terminate: Never diminishes (a kind of memory leak)
+        2. If parent does terminate: Reaped by `init` process (pid == 1)
+        * So only need to explicitly reap long-running processes
+* Loading and running processes: `execve()`
+    * `int execve(char *filename, char *argv[], char *envp[])`
+    * Loads and runs in the current process
+    * Overwrites code, data and stack
+    * Retains PID, open files (e.g. `stdout`), and signal context
+    * Called once and never return (except error)
