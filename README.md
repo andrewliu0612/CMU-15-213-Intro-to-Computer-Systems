@@ -462,7 +462,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
                 ```
                 sigprocmask(SIG_BLOCK, &mask, &prev);
                 pause()
-                sigprocmask(SIG_BLOCK, prev, NULL);    
+                sigprocmask(SIG_BLOCK, &prev, NULL);    
                 ```
     * Portable signal handling
         * Problem: Different versions of unix have different signal handling semantics
