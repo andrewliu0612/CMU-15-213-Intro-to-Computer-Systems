@@ -422,9 +422,9 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             1. `SIG_IGN`: Ignore
             2. `SIG_DFL`: Revert to default
             3. Function pointer to a user-level signal handler
-    * Signal handlers are a form of concurrency
-        <img src="Note_Images/concurrent_flows.png" width=50%>  
-        <img src="Note_Images/concurrent_flows2.png" width=60%>  
+    * Signal handlers are a form of concurrency  
+        <img src="Note_Images/concurrent_flows.png" width=40%>  
+        <img src="Note_Images/concurrent_flows2.png" width=50%>  
     * Signal handlers can be nested  
         <img src="Note_Images/nested_signal_handlers.png" width=60%>  
         * So we need __blocking__
