@@ -334,7 +334,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     2. Context switch
     3. Signals
     4. Nonlocal jumps
-* Exceptions  
+* Exceptions (equivalent to user-kernel transition)  
     <img src="Note_Images/exceptions.png" width=50%>  
     1. Asynchronous (Interrupts)
         * Indicated by INT pin
@@ -378,3 +378,91 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Overwrites code, data and stack
     * Retains PID, open files (e.g. `stdout`), and signal context
     * Called once and never return (except error)
+* Process groups
+    * Can be get and set by `getpgrp()` and `setpgid()`
+    * Kill all process in a group with `kill -n -<pid>` 
+
+# Signals
+* Unix shell: An application that runs program on behalf of the user
+    * Shell contains a basic loop and a `eval()` function
+    * Two cases in `eval()`:
+        1. Shell built-in command
+        2. Not build-in, use `fork()` and `execve()`
+    * __Motivation__: How to reap __both__ foreground and background jobs?
+        * Basic loop: Only reaps foreground jobs
+        * Fix: Signals
+* Signals
+    * Akin to exceptions and interrupts
+    * Sent from signal (sometimes at the request of another process via `kill`)
+    * Identified by an integer
+    * Controlled by __per-process__ `pending` and `blocked` bit vectors
+        * `pending` vector set and cleared __by kernel__ when signals is sent or received
+        * `blocked` vector can be manipulated by `sigprocmask()` function
+        * So, signals cannot be queued
+    * __Send__: `pending` bit set
+    * __Receive__: process reacts to the signal, clears `pending` bit
+        1. Ignore
+        2. Terminate
+        3. Catch (using user-level function called _signal handler_)
+    * Kernels checks for `pnb = pending & ~blocked` at beginning of a time-slice
+        * If `pnb == 0`:
+            * Pass control to next instruction in the process logical flow 
+        * Else
+            1. Choose lease non-zero bit in `pnb` and forces the process to receive the signal
+            2. The receipt of the signal triggers some action by the process (clears `pending` bit)
+            3. Repeat for all remaining nonzero bits
+            4. Pass control to next instruction in the process logical flow
+    * Default action can be one of:
+        1. Termination
+        2. Stop until restarted by `SIGCONT`
+        3. Ignore
+    * Override default action by installing `signal handlers`:
+        * `handler_t *signal(int signum, handler_t *handler)`
+        * `handler` can be one of:
+            1. `SIG_IGN`: Ignore
+            2. `SIG_DFL`: Revert to default
+            3. Function pointer to a user-level signal handler
+    * Signal handlers are a form of concurrency
+        <img src="Note_Images/concurrent_flows.png" width=50%>  
+        <img src="Note_Images/concurrent_flows2.png" width=60%>  
+    * Signal handlers can be nested  
+        <img src="Note_Images/nested_signal_handlers.png" width=60%>  
+        * So we need __blocking__
+            1. Implicit blocking: blocks pendings signals of same type
+            2. Explicit blocking: `sigprogmask()` with supporting functions of:
+                * `sigemptyset()`
+                * `sigfillset()`
+                * `sigaddset()`
+                * `sigdelset()`
+    * How to write safe handlers?
+        1. Keep handlers as simple as possible
+        2. Call only `async-signal-safe` function in handlers
+            * `async-signal-safe` functions are _reentrent_ (access only local variables on stack), or cannot be interrupted by another signal handler
+            * `printf()`, `malloc()` and `exit()` are __not__ safe
+            * `write()` is the only signal-safe output function
+        3. Save and restore `errno` on entry and exit
+        4. Protect accesses to shared data structures by temporarily blocking __all__ signals in __both__ handler and `main()`
+        5. Declare global variables to be `volatile`, to prevent from being optimized into registers
+        6. Declare global __flags__ as `volatile sig_atomic_t`
+            * Flag: variable only read or written (not `flag++` or `flag+=10`)
+            * `volatile sig_atomic_t` are ints on most systems
+    * Avoid race conditions
+        * Cannot make `any` assumption regarding execution order
+        * However, we can control when handlers run by blocking
+    * Explicitly waiting for signals: suppose handler sets global variable `pid`:
+        * Spin wait: `while(!pid) {}`
+            * Wasteful
+        * Pause: `while(!pid) pause()`
+            * Race condition
+        * Sleep: `while(!pid) sleep(1)`
+            * Too slow
+        * Solution: `sigsuspend`
+            * `int sigsuspend(const sigset_t *mask)`
+            * Equivalent to __atomic__:
+                ```
+                sigprocmask(SIG_BLOCK, &mask, &prev);
+                pause*()
+                sigprocmask(SIG_BLOCK, prev, NULL);    
+                ```
+    * Portable signal handling
+        * Problem: Different versions of unix have different signal handling semantics
