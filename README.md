@@ -423,7 +423,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             2. `SIG_DFL`: Revert to default
             3. Function pointer to a user-level signal handler
     * Signal handlers are a form of concurrency  
-        <img src="Note_Images/concurrent_flows.png" width=40%>  
+        <img src="Note_Images/concurrent_flows.png" width=40%>
         <img src="Note_Images/concurrent_flows2.png" width=50%>  
     * Signal handlers can be nested  
         <img src="Note_Images/nested_signal_handlers.png" width=60%>  
@@ -461,7 +461,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             * Equivalent to __atomic__:
                 ```
                 sigprocmask(SIG_BLOCK, &mask, &prev);
-                pause*()
+                pause()
                 sigprocmask(SIG_BLOCK, prev, NULL);    
                 ```
     * Portable signal handling
