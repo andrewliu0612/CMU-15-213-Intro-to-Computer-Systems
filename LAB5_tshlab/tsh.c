@@ -314,6 +314,9 @@ void do_bgfg(char **argv) {
     struct job_t* job;
     sigset_t mask_all, prev_all;
     Sigfillset(&mask_all);
+    pid_t pid;
+    int jid;
+    char cmdline[MAXLINE];
 
     Sigprocmask(SIG_BLOCK, &mask_all, &prev_all);
     if(id == NULL) {
@@ -346,7 +349,12 @@ void do_bgfg(char **argv) {
         return;
     }
 
-    Kill(-(job -> pid), SIGCONT);
+    /* Copy data for printing */
+    pid = job -> pid;
+    jid = job -> jid;
+    strcpy(cmdline, job -> cmdline);
+    
+    Kill(-pid, SIGCONT);
     if(strcmp(argv[0], "fg") == 0) {
         job -> state = FG;
         Sigprocmask(SIG_SETMASK, &prev_all, NULL);
@@ -354,7 +362,7 @@ void do_bgfg(char **argv) {
     } else {
         job -> state = BG;
         Sigprocmask(SIG_SETMASK, &prev_all, NULL);
-        printf("[%d] (%d) %s", job -> jid, job -> pid, job -> cmdline);
+        printf("[%d] (%d) %s", jid, pid, cmdline);
     }
     
     return;
