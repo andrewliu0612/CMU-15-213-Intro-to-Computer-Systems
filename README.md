@@ -467,3 +467,16 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Portable signal handling
         * Problem: Different versions of unix have different signal handling semantics
         * Solution: Use `sigaction`
+
+# Virtual Memory
+* Physical Addressing: Used in microcontrollers, embedded systems, etc.
+* __Mentality__: Main memory is a fully-associative cache for disk
+    * Load doesn't necessarily happen with `execve()`. It only allocates virtual address space with valid bit of 0
+    * __Loading is a result of a page fault__ (demand paging)
+    * 
+* Kernel memory invisible to application program. Kernal's address space starts with 1.
+* Every memory access go through cache memory:
+    * Both memory and cache gets updated after page fault  
+        <img src="Note_Images/vm_and_cache.png" width=60%>  
+* TLB: Small __set-associative__ hardware cache in MMU
+* Works only because of locality
