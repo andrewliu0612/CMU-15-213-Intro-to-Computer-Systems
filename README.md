@@ -473,10 +473,54 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 * __Mentality__: Main memory is a fully-associative cache for disk
     * Load doesn't necessarily happen with `execve()`. It only allocates virtual address space with valid bit of 0
     * __Loading is a result of a page fault__ (demand paging)
-* Kernel memory invisible to application program. Kernal's address space starts with 1.
+* Kernel memory invisible to application program. Kernel's address space starts with 1.
 * Every memory access go through cache memory:
     * Both memory and cache gets updated after page fault  
         <img src="Note_Images/vm_and_cache.png" width=60%>  
 * Address translation: Multi-level page tables
 * TLB: Small __set-associative__ hardware cache in MMU
 * Works only because of locality
+
+# System-Level I/O
+* Unix I/O
+    1. Opening and closing files: `open()`, `close()`
+    2. Reading and writing files: `read()`, `write()`
+    3. Changing file position: `lseek()`
+    4. View file metadata: `stat()`
+        * `stat()` are both a syscall and a linux program
+        * Syscalls are in second section of man: `man 2 stat` 
+    * Always check return codes for these syscalls
+* File types: Regular, directory, socket, named pipes, symlinks, character and block devices
+* Short counts: (`nbytes < sizeof(buf)`) are possible
+* Wrapper: RIO (robust I/O) package
+    1. Unbuffered I/O of binary data: `rio_readn()` and `rio_writen()`
+    2. Buffered I/O of text or binary: `rio_readlineb()` and `rio_readnb()`
+    * RIO package is better for input and output on network sockets
+* Standard I/O
+    1. Opening and closing: `fopen()` and `fclose()`
+    2. Reading and writing bytes: `fread()` and `fwrite()`
+    3. Reading and writing text lines: `fgets()` and `fputs()`
+    4. Formatted reading and writing: `fscanf()` and `fprintf()`
+    * C program begin with 3 open files:
+        1. `stdin` (descriptor 0) 
+        2. `stdout` (descriptor 1)
+        3. `stderr` (descriptor 2)
+* Trace syscalls with the Linux `strace` program
+* Choosing I/O functions
+    * General: Use highest-level functions
+    * When to use Unix I/O: Signal handlers because unix I/O functions are `async-signal-safe`
+    * When to use standard I/O: Disks, terminals
+    * When to use RIO: Network sockets
+* How kernel represents open files  
+    <img src="Note_Images/open_files1.png" width=60%>
+    * Open file table: An instance of opening file
+        * If a process opens a file twice, there are two open file tables pointing to the same v-node table
+    * V-node table: File metadata (regardless of whether file is open)
+    * After `fork()`, `refcnt` is incremented:  
+        <img src="Note_Images/open_files2.png" width=60%>  
+        * Two processes share a same instance of opened file (including file position)
+    * `dup2(int oldfd, int newfd)`: Used for I/O redirection
+        After calling `dup2(4, 1)`:  
+            <img src="Note_Images/open_files3.png" width=60%>  
+* Recommended references:
+    * W. Richard Stevens & Stephen A. Rago, _Advanced Programming in the Unix Environment_, 2 nd Edition, Addison Wesley, 2005
