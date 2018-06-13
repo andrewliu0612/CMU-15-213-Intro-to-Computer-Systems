@@ -520,7 +520,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         <img src="Note_Images/open_files2.png" width=60%>  
         * Two processes share a same instance of opened file (including file position)
     * `dup2(int oldfd, int newfd)`: Used for I/O redirection
-        After calling `dup2(4, 1)`:  
+        * After calling `dup2(4, 1)`:  
             <img src="Note_Images/open_files3.png" width=60%>  
 * Recommended references:
     * W. Richard Stevens & Stephen A. Rago, _Advanced Programming in the Unix Environment_, 2 nd Edition, Addison Wesley, 2005
