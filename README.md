@@ -524,3 +524,19 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             <img src="Note_Images/open_files3.png" width=60%>  
 * Recommended references:
     * W. Richard Stevens & Stephen A. Rago, _Advanced Programming in the Unix Environment_, 2 nd Edition, Addison Wesley, 2005
+
+# Virtual Memory: Systems
+* End-to-end Core i7 Address Translation  
+    <img src="Note_Images/address_translation.png" width=80%>  
+* L1 d-cache `index` and `offset` have 12 bits is NOT a coincidence: Speed up address translation  
+    <img src="Note_Images/cache_speedup.png" width=50%>  
+* Linux organizes VM as collections of areas:  
+    * Fault handling: Traverse the `vm_area_struct`s to check if page is allocated
+    <img src="Note_Images/areas.png" width=80%>  
+* Private Copy-on-write (COW)
+* Memory Mapping: `void *mmap(void *start, int len, int prot, int flags, int fd, int offset)`
+    * `start`: A hint address
+    * `prot`: `PROT_READ`, `PROT_WRITE`, `PROT_EXEC` 
+    * `flags`: `MAP_ANON`, `MAP_PRIVATE`, `MAP_SHARED`
+    * Returns a pointer to the start of mapped area (may not be start)
+    
