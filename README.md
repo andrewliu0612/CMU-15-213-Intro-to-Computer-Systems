@@ -539,4 +539,51 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * `prot`: `PROT_READ`, `PROT_WRITE`, `PROT_EXEC` 
     * `flags`: `MAP_ANON`, `MAP_PRIVATE`, `MAP_SHARED`
     * Returns a pointer to the start of mapped area (may not be start)
-    
+
+# Dynamic Memory Allocation
+* Allocators: Maintain the heap as a collection of variable sized blocks, which are either _allocated_ or _free_
+    * Explicit allocator: Application allocates and frees
+    * Implicit allocator: Application allocates but not frees
+* The `malloc` package
+    * `void *malloc(size_t size)`
+    * `void free(void *p)`
+    * `calloc`: Initializes allocated blocks to 0
+    * `realloc`: Changes size of previously allocated block
+    * `sbrk`: Used internally by allocators to grow and shrink the heap
+* Constraints:
+    * Applications have few constraints
+    * Allocators have many constraints:
+        1. Can't assume allocation patterns
+        2. Must respond immediately to `malloc` (can't defer allocation)
+        3. Can't relocate allocated memory
+* Performance goal (2 conflicting goals)
+    * Throughput: Number of completed requests per unit time
+    * Peak memory utilization: How to efficiently use memory
+* Fragmentation
+    * Internal fragmentation: 
+        * Payload smaller than block size
+        * Easy to measure
+    * External fragmentation: 
+        * Enough aggregate heap memory, but no single free block large enough
+        * Difficult to measure
+* Keeping track of free blocks  
+    <img src="Note_Images/keeping_track_of_free_lists.png" width=50%>  
+* How to find a free block
+    1. First fit
+    2. Next fit
+    3. Best fit
+* Know how much to free: Header
+    * Encodes block size (including the header and any padding) 
+    * Alignment means lower-bits of size are 0, used to encode allocated bit  
+        <img src="Note_Images/implicit_free_list.png" width=50%>  
+* Implicit list: 
+    * Allocating a free block: May need to split the block
+    * Freeing a block: Have to coalesce free blocks (4 cases):  
+        <img src="Note_Images/coalescing.png" width=50%>  
+    * Singly-linked list cannot free previous block in constant time
+        * Fix: Doubly-linked list (head and footer)
+        * Optimization: 
+            * Allocated blocks doesn't need coalescing
+            * We have extra bits to encode whether previous block is allocated  
+            * So, allocated blocks doesn't need footer
+    * Implicit lists are not commonly used because of linear time. However, the concepts of splitting and coalescing are general to __all__ allcators
