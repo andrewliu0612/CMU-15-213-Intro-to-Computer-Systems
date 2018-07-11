@@ -139,6 +139,14 @@ static void *extend_heap(size_t words) {
  * find_fit - Find a free block satisfying size reqs.
  */
 static void *find_fit(size_t size) {
+    char *ptr = heap_listp + WSIZE;
+    
+    /* Implicit free list with first fit */
+    while((ptr < mem_heap_hi) &&    /* Not passed end */
+            (GET_ALLOC(p) ||        /* Already allocated */
+            GET_SIZE(p) < size)) {  /* Too small */
+        p += GET_SIZE(p);
+    }
     // TODO
 }
 
@@ -148,7 +156,22 @@ static void *find_fit(size_t size) {
  *      the minumum block size.
  */
 void place(void *ptr, size_t size) {
-    // TODO
+    size_t bsize;           /* Size of the free block */
+    bsize = GET_SIZE(HDRP(ptr));
+
+    /* No split */
+    if(bsize - size < 2 * DSIZE) {
+        PUT(HDRP(ptr), PACK(bsize, 1));
+        PUT(FTRP(ptr), PACK(bsize, 1));
+    }
+
+    /* Split */
+    else {
+        PUT(HDRP(ptr), PACK(size, 1));
+        PUT(HDRP(ptr), PACK(size, 1));
+        PUT(HDRP(NEXT_BLKP(ptr)), PACK(bsize - size), 0);
+        PUT(FTRP(NEXT_BLKP(ptr)), PACK(bsize - size), 0);
+    }
 }
 
 
@@ -203,7 +226,9 @@ void *mm_malloc(size_t size) {
  */
 void mm_free(void *ptr) {
     /* Mark the block as free */
-    PUT();
+    PUT(HDRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
+    PUT(FTRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
+    coalesce(ptr);
 }
 
 /*
