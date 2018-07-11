@@ -61,26 +61,48 @@ team_t team = {
 #define PUT(p, val)     (*(unsigned int *)(p) = (val))
 
 /* Read the size and allocated fields from address p */
-#define GET_SIZE        (GET(p) & ~0x7)
-#define GET_ALLOC       (GET(p) & 0x1)
+#define GET_SIZE(p)     (GET(p) & ~0x7)
+#define GET_ALLOC(p)    (GET(p) & 0x1)
 
 /* Given block ptr bp, compute address of its header and footer */
 #define HDRP(bp)        ((char *)(bp) - WSIZE)
 #define FTRP(bp)        ((char *)(bp) + GET_SIZE(HDRP(bp)) - DSIZE)
 
 /* Given block ptr bp, compute address of next and previous blocks */
-#define NEXT_BLKP       ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE))
-#define PREV_BLKP       ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
+#define NEXT_BLKP(bp)   ((char *)(bp) + GET_SIZE(((char *)(bp) - WSIZE)))
+#define PREV_BLKP(bp)   ((char *)(bp) - GET_SIZE(((char *)(bp) - DSIZE)))
 
 /* Global variables */
 static char *heap_listp;        /* Start of heap */
 
 /*
+ * Coalesce adjacent free blocks
+ */
+static void *coalesce(void *bp) {
+    // TODO
+    return (void *)0;
+}
+
+
+/*
  * extend_heap - Extends the heap with a new free block
  */
 static void *extend_heap(size_t words) {
+    size_t size;
+    char *bp;
 
     /* Allocate an even number of words to maintain alignment */
+    size = (words % 2) ? ((words + 1) * WSIZE) : (words * WSIZE);
+    if((long)(bp = (char *)mem_sbrk(size)) == -1)   /* mem_sbrk() failed */
+        return NULL;
+    
+    /* Initialize free block header/footer and the epilogue header */
+    PUT(HDRP(bp), PACK(size, 0));                   /* Free block header */
+    PUT(FTRP(bp), PACK(size, 0));                   /* Free block footer */
+    PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));           /* New epilogue header */
+
+    /* Return the block pointer of the possibly coalesced block */
+    return coalesce(bp);
 }
 
 
@@ -135,10 +157,10 @@ void *mm_realloc(void *ptr, size_t size) {
     
     newptr = mm_malloc(size);
     if (newptr == NULL)
-      return NULL;
+        return NULL;
     copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
     if (size < copySize)
-      copySize = size;
+        copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
     return newptr;
