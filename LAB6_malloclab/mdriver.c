@@ -91,6 +91,7 @@ typedef struct {
 int verbose = 0;        /* global flag for verbose output */
 static int errors = 0;  /* number of errs found when running student malloc */
 char msg[MAXLINE];      /* for whenever we need to compose an error message */
+int ret;				/* return value to keep gcc happy */
 
 /* Directory where default tracefiles are found */
 static char tracedir[MAXLINE] = TRACEDIR;
@@ -435,12 +436,12 @@ static void remove_range(range_t **ranges, char *lo)
 {
     range_t *p;
     range_t **prevpp = ranges;
-    int size;
+    // int size;
 
     for (p = *ranges;  p != NULL; p = p->next) {
         if (p->lo == lo) {
-	    *prevpp = p->next;
-            size = p->hi - p->lo + 1;
+	    	*prevpp = p->next;
+            // size = p->hi - p->lo + 1;
             free(p);
             break;
         }
@@ -495,10 +496,10 @@ static trace_t *read_trace(char *tracedir, char *filename)
 	sprintf(msg, "Could not open %s in read_trace", path);
 	unix_error(msg);
     }
-    fscanf(tracefile, "%d", &(trace->sugg_heapsize)); /* not used */
-    fscanf(tracefile, "%d", &(trace->num_ids));     
-    fscanf(tracefile, "%d", &(trace->num_ops));     
-    fscanf(tracefile, "%d", &(trace->weight));        /* not used */
+    ret = fscanf(tracefile, "%d", &(trace->sugg_heapsize)); /* not used */
+    ret = fscanf(tracefile, "%d", &(trace->num_ids));     
+    ret = fscanf(tracefile, "%d", &(trace->num_ops));     
+    ret = fscanf(tracefile, "%d", &(trace->weight));        /* not used */
     
     /* We'll store each request line in the trace in this array */
     if ((trace->ops = 
@@ -521,21 +522,21 @@ static trace_t *read_trace(char *tracedir, char *filename)
     while (fscanf(tracefile, "%s", type) != EOF) {
 	switch(type[0]) {
 	case 'a':
-	    fscanf(tracefile, "%u %u", &index, &size);
+	    ret = fscanf(tracefile, "%u %u", &index, &size);
 	    trace->ops[op_index].type = ALLOC;
 	    trace->ops[op_index].index = index;
 	    trace->ops[op_index].size = size;
 	    max_index = (index > max_index) ? index : max_index;
 	    break;
 	case 'r':
-	    fscanf(tracefile, "%u %u", &index, &size);
+	    ret = fscanf(tracefile, "%u %u", &index, &size);
 	    trace->ops[op_index].type = REALLOC;
 	    trace->ops[op_index].index = index;
 	    trace->ops[op_index].size = size;
 	    max_index = (index > max_index) ? index : max_index;
 	    break;
 	case 'f':
-	    fscanf(tracefile, "%ud", &index);
+	    ret = fscanf(tracefile, "%ud", &index);
 	    trace->ops[op_index].type = FREE;
 	    trace->ops[op_index].index = index;
 	    break;
