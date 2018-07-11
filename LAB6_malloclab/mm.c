@@ -75,12 +75,42 @@ team_t team = {
 /* Global variables */
 static char *heap_listp;        /* Start of heap */
 
+
+
 /*
  * Coalesce adjacent free blocks
  */
 static void *coalesce(void *bp) {
-    // TODO
-    return (void *)0;
+    /* Whether adjacent blocks have been allocated */
+    size_t prev_alloc = GET_ALLOC(HDRP(PREV_BLKP(bp)));
+    size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
+
+    size_t size = GET_SIZE(bp);             /* Size of this block */
+
+    if(prev_alloc && next_alloc) {          /* Case 1 */
+        /* Do nothing */
+    }
+
+    else if(prev_alloc && !next_alloc) {    /* Case 2 */
+        size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
+        PUT(HDRP(bp), PACK(size, 0));
+        PUT(FTRP(bp), PACK(size, 0));
+    }
+
+    else if(!prev_alloc && next_alloc) {    /* Case 3 */
+        size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+        PUT(FTRP(bp), PACK(size, 0));
+        bp = PREV_BLKP(bp);
+    }
+
+    else {                                  /* Case 4 */
+        size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(HDRP(NEXT_BLKP(bp)));
+        PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
+        PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
+        bp = PREV_BLKP(bp);
+    }
+    return bp;
 }
 
 
@@ -105,6 +135,21 @@ static void *extend_heap(size_t words) {
     return coalesce(bp);
 }
 
+/*
+ * find_fit - Find a free block satisfying size reqs.
+ */
+static void *find_fit(size_t size) {
+    // TODO
+}
+
+/*
+ *  place - Place the requested block at the beginning of the free block, 
+ *      splitting only if the size of the remainder would equal or exceed
+ *      the minumum block size.
+ */
+void place(void *ptr, size_t size) {
+    // TODO
+}
 
 
 /* 
@@ -130,21 +175,35 @@ int mm_init(void) {
  *     Always allocate a block whose size is a multiple of the alignment.
  */
 void *mm_malloc(size_t size) {
-    int newsize = ALIGN(size + SIZE_T_SIZE);
-    void *p = mem_sbrk(newsize);
-    if (p == (void *)-1)
-	return NULL;
-    else {
-        *(size_t *)p = size;
-        return (void *)((char *)p + SIZE_T_SIZE);
+    size_t asize;                   /* Adjusted size */
+    size_t extendsize;              /* Amount to adjust if no fit */
+    char *bp;
+
+    /* Sanity check */
+    if(size == 0)
+        return NULL;
+    
+    /* Adjust block size to include overhead and alignment reqs */
+    if(size < DSIZE) {
+        asize = 2 * DSIZE;
+    } else {
+        asize = ALIGN(size + DSIZE);
     }
+
+    /* Search the free list for a fit */
+    if((bp = find_fit(asize)) == NULL) {
+        return NULL;
+    }
+    place(bp, asize);
+    return bp;
 }
 
 /*
- * mm_free - Freeing a block does nothing.
+ * mm_free - Freeing a block.
  */
 void mm_free(void *ptr) {
-
+    /* Mark the block as free */
+    PUT();
 }
 
 /*
@@ -226,8 +285,3 @@ static int mm_check() {
     assert(mm_check_valid_addr());
     return 1;
 }
-
-
-
-
-
