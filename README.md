@@ -1,4 +1,4 @@
-# CMU-15-213-Intro-to-Computer-Systems
+ # CMU-15-213-Intro-to-Computer-Systems
 Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
 
 # Integer representation
@@ -576,7 +576,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Encodes block size (including the header and any padding) 
     * Alignment means lower-bits of size are 0, used to encode allocated bit  
         <img src="Note_Images/implicit_free_list.png" width=50%>  
-* Implicit list: 
+* Implicit list
     * Allocating a free block: May need to split the block
     * Freeing a block: Have to coalesce free blocks (4 cases):  
         <img src="Note_Images/coalescing.png" width=50%>  
@@ -587,3 +587,22 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
             * We have extra bits to encode whether previous block is allocated  
             * So, allocated blocks doesn't need footer
     * Implicit lists are not commonly used because of linear time. However, the concepts of splitting and coalescing are general to __all__ allcators
+* Explicit free list  
+    <img src="Note_Images/explicit_free_list.png" width=50%>  
+    * Maintain list of free blocks using payload area
+    * Blocks can be in any order (depending on insertion policy)
+        * Unordered: LIFO, FIFO
+        * Address-ordered
+    * Much faster than implicit lists when memory is full
+* Segregated list  
+    <img src="Note_Images/segregated_list.png" width=40%>  
+* Garbage collection  
+    <img src="Note_Images/memory_graph.png" width=50%>  
+    * Mark and sweep collecting
+        * Allocate using `malloc` until run out of space
+        * Use extra mark bit for each block
+        * Root nodes: Pointers in stack/data section
+        * Does not distinguish between pointers/non-pointers, thus "safe"
+        * _Mark_: Start at root nodes and do DFS
+        * _Sweep_: Start at beginning of VM, and free unmarked blocks
+        * How to find beginning of block? -- Use a balanced tree
