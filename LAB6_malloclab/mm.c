@@ -133,15 +133,16 @@ void *mm_malloc(size_t size) {
     /* Search the free list for a fit */
     if((bp = find_fit(asize)) == NULL) {
         /* Calculate the amount to adjust */
-        size_t prev_size = GET_SIZE(PREV_BLKP((char *)mem_heap_hi() + WSIZE));
-        extendsize = asize - prev_size;
+        size_t prev_size = GET_SIZE(HDRP(PREV_BLKP((char *)mem_heap_hi() + 1)));
+        int prev_alloc = GET_ALLOC(HDRP(PREV_BLKP((char *)mem_heap_hi() + 1)));
+        extendsize = asize - (prev_alloc ? 0 : prev_size);
         bp = (char *)extend_heap(extendsize / WSIZE);
     }
     place(bp, asize);
     return bp;
 }
 
-/*
+/* 
  * mm_free - Freeing a block.
  */
 void mm_free(void *ptr) {
@@ -247,8 +248,8 @@ static void *find_fit(size_t size) {
     if(ptr == (char *)mem_heap_hi() + 1)
         return NULL;
     else
-        /* Return start of thisw block, not block ptr */
-        return ptr - DSIZE; 
+        /* Return block ptr, not start of this block */
+        return ptr; 
 }
 
 /*
@@ -269,7 +270,7 @@ void place(void *ptr, size_t size) {
     /* Split */
     else {
         PUT(HDRP(ptr), PACK(size, 1));
-        PUT(HDRP(ptr), PACK(size, 1));
+        PUT(FTRP(ptr), PACK(size, 1));
         PUT(HDRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
         PUT(FTRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
     }
