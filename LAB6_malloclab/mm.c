@@ -43,16 +43,16 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
-
+#define DEBUG 0
 
 
 /* Basic constants and macros */
-#define WSIZE       4           /* Word and header/footer size */
-#define DSIZE       8           /* Double word size (bytes) */
-// #define CHUNKSIZE   (1 << 12)   /* Extend heap by this amount (bytes) */
-#define CHUNKSIZE   (1 << 6)   /* Extend heap by this amount (bytes) */
+#define WSIZE           4           /* Word and header/footer size */
+#define DSIZE           8           /* Double word size (bytes) */
+// #define CHUNKSIZE   (1 << 12)       /* Extend heap by this amount (bytes) */
+#define CHUNKSIZE       (1 << 6)    /* Extend heap by this amount (bytes) */
+#define SEGLISTCOUNT    5           /* Number of segregated lists */
 
-#define MAX(x, y)   ((x) > (y) ? (x) : (y))
 
 /* Pack a size and allocated bit into a word */
 #define PACK(size, alloc) ((size) | (alloc))
@@ -76,11 +76,25 @@ team_t team = {
 /* Global variables */
 static char *heap_listp;        /* Start of heap */
 
+/*
+ * Segregated list roots;
+ *      roots[0]:       Seglist root 1-2
+ *      roots[1]:       Seglist root 3
+ *      roots[2]:       Seglist root 4
+ *      roots[3]:       Seglist root 5-8
+ *      roots[4]:       Seglist root 9-inf
+ */
+static char *roots[5];         /* Seglist array */
+
+
 /* Forward declarations */
 static void *coalesce(void *);
 static void *extend_heap(size_t);
 static void *find_fit(size_t);
-void place(void *, size_t);
+static void place(void *, size_t);
+static void *get_root(size_t);
+static void *get_block(size_t);
+static void put_block(void *);
 static void mm_check();
 static int mm_check_all_free();
 static int mm_check_no_contiguous_free();
@@ -106,7 +120,8 @@ int mm_init(void) {
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if(extend_heap(CHUNKSIZE / WSIZE) == NULL)
         return -1;
-    mm_check();
+    if(DEBUG)
+        mm_check();
     return 0;
 }
 
@@ -122,6 +137,9 @@ void *mm_malloc(size_t size) {
     /* Sanity check */
     if(size == 0)
         return NULL;
+    
+    /* Initialize all seglist roots to NULL */
+    memset((void *)roots, 0, SEGLISTCOUNT * sizeof(char *));
     
     /* Adjust block size to include overhead and alignment reqs */
     if(size < DSIZE) {
@@ -257,7 +275,7 @@ static void *find_fit(size_t size) {
  *      splitting only if the size of the remainder would equal or exceed
  *      the minumum block size.
  */
-void place(void *ptr, size_t size) {
+static void place(void *ptr, size_t size) {
     size_t bsize;           /* Size of the free block */
     bsize = GET_SIZE(HDRP(ptr));
 
@@ -276,6 +294,40 @@ void place(void *ptr, size_t size) {
     }
 }
 
+/*
+ * get_root - Given a free block size, return the corresponding segregated 
+ *      list root.
+ */
+static void *get_root(size_t size) {
+    if(size <= 2) 
+        return (void *)roots[0];
+    else if(size <= 3)
+        return (void *)roots[1];
+    else if(size <= 4)
+        return (void *)roots[2];
+    else if(size <= 8)
+        return (void *)roots[3];
+    else
+        return (void *)roots[4];
+}
+
+/*
+ * get_block - Given a free block size, find a block from corresponding
+ *      segregated list root, and remove this block from the list. Return
+ *      the block ptr.
+ */
+static void *get_block(size_t size) {
+    // TODO
+    return NULL;
+}
+
+/*
+ * put_block - Given a block ptr, put it into the corresponding segregated 
+ *      list. Blocks in list are address-ordered.
+ */
+static void put_block(void *bp) {
+    // TODO
+}
 
 
 /****** Consistency checker ******/
