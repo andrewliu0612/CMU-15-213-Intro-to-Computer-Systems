@@ -106,8 +106,8 @@ int mm_init(void) {
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if(extend_heap(CHUNKSIZE / WSIZE) == NULL)
         return -1;
-    return 0;
     mm_check();
+    return 0;
 }
 
 /* 
@@ -180,7 +180,7 @@ static void *coalesce(void *bp) {
     size_t prev_alloc = GET_ALLOC(HDRP(PREV_BLKP(bp)));
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
 
-    size_t size = GET_SIZE(bp);             /* Size of this block */
+    size_t size = GET_SIZE(HDRP(bp));       /* Size of this block */
 
     if(prev_alloc && next_alloc) {          /* Case 1 */
         /* Do nothing */
@@ -234,20 +234,21 @@ static void *extend_heap(size_t words) {
  * find_fit - Find a free block satisfying size reqs.
  */
 static void *find_fit(size_t size) {
-    char *ptr = heap_listp + WSIZE;
+    char *ptr = heap_listp + DSIZE;
     
     /* Implicit free list with first fit */
-    while(ptr < (char *)mem_heap_hi() &&    /* Not passed end */
-            (GET_ALLOC(ptr) ||              /* Already allocated */
-            GET_SIZE(ptr) < size)) {        /* Too small */
-        ptr += GET_SIZE(ptr);
+    while(ptr < (char *)mem_heap_hi() &&        /* Not passed end */
+            (GET_ALLOC(HDRP(ptr)) ||            /* Already allocated */
+            GET_SIZE(HDRP(ptr)) < size)) {      /* Too small */
+        ptr += GET_SIZE(HDRP(ptr));
     }
     
     /* Return NULL if no free block is found */
-    if(ptr == mem_heap_hi())
+    if(ptr == (char *)mem_heap_hi() + 1)
         return NULL;
     else
-        return ptr;
+        /* Return start of thisw block, not block ptr */
+        return ptr - DSIZE; 
 }
 
 /*
