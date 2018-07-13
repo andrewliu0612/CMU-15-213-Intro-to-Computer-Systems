@@ -36,7 +36,7 @@ team_t team = {
 };
 
 /* single word (4) or double word (8) alignment */
-#define ALIGNMENT 8
+#define ALIGNMENT   8
 
 /* rounds up to the nearest multiple of ALIGNMENT */
 #define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
@@ -49,7 +49,8 @@ team_t team = {
 /* Basic constants and macros */
 #define WSIZE       4           /* Word and header/footer size */
 #define DSIZE       8           /* Double word size (bytes) */
-#define CHUNKSIZE   (1 << 12)   /* Extend heap by this amount (bytes) */
+// #define CHUNKSIZE   (1 << 12)   /* Extend heap by this amount (bytes) */
+#define CHUNKSIZE   (1 << 6)   /* Extend heap by this amount (bytes) */
 
 #define MAX(x, y)   ((x) > (y) ? (x) : (y))
 
@@ -75,10 +76,104 @@ team_t team = {
 /* Global variables */
 static char *heap_listp;        /* Start of heap */
 
+/* Forward declarations */
+static void *coalesce(void *);
+static void *extend_heap(size_t);
+static void *find_fit(size_t);
+void place(void *, size_t);
+static void mm_check();
+static int mm_check_all_free();
+static int mm_check_no_contiguous_free();
+static int mm_check_free_in_list();
+static int mm_check_point_to_free();
+static int mm_check_overlap();
+static int mm_check_valid_addr();
 
+
+/* 
+ * mm_init - Initialize the malloc package.
+ */
+int mm_init(void) {
+    /* Create the initial empty heap */
+    if((heap_listp = (char *)(mem_sbrk(4 * WSIZE))) == (char *)(-1))
+        return -1;
+    PUT(heap_listp, 0);                             /* Alignment padding */
+    PUT(heap_listp + 1 * WSIZE, PACK(DSIZE, 1));    /* Prologue header*/
+    PUT(heap_listp + 2 * WSIZE, PACK(DSIZE, 1));    /* Prologue footer*/
+    PUT(heap_listp + 3 * WSIZE, PACK(0, 1));        /* Epilogue header*/
+    heap_listp += (2 * WSIZE);
+
+    /* Extend the empty heap with a free block of CHUNKSIZE bytes */
+    if(extend_heap(CHUNKSIZE / WSIZE) == NULL)
+        return -1;
+    return 0;
+    mm_check();
+}
+
+/* 
+ * mm_malloc - Allocate a block by incrementing the brk pointer.
+ *     Always allocate a block whose size is a multiple of the alignment.
+ */
+void *mm_malloc(size_t size) {
+    size_t asize;                   /* Adjusted size */
+    size_t extendsize;              /* Amount to adjust if no fit */
+    char *bp;
+
+    /* Sanity check */
+    if(size == 0)
+        return NULL;
+    
+    /* Adjust block size to include overhead and alignment reqs */
+    if(size < DSIZE) {
+        asize = 2 * DSIZE;
+    } else {
+        asize = ALIGN(size + DSIZE);
+    }
+
+    /* Search the free list for a fit */
+    if((bp = find_fit(asize)) == NULL) {
+        /* Calculate the amount to adjust */
+        size_t prev_size = GET_SIZE(PREV_BLKP((char *)mem_heap_hi() + WSIZE));
+        extendsize = asize - prev_size;
+        bp = (char *)extend_heap(extendsize / WSIZE);
+    }
+    place(bp, asize);
+    return bp;
+}
 
 /*
- * Coalesce adjacent free blocks
+ * mm_free - Freeing a block.
+ */
+void mm_free(void *ptr) {
+    /* Mark the block as free */
+    PUT(HDRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
+    PUT(FTRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
+    coalesce(ptr);
+}
+
+/*
+ * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
+ */
+void *mm_realloc(void *ptr, size_t size) {
+    void *oldptr = ptr;
+    void *newptr;
+    size_t copySize;
+    
+    newptr = mm_malloc(size);
+    if (newptr == NULL)
+        return NULL;
+    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
+    if (size < copySize)
+        copySize = size;
+    memcpy(newptr, oldptr, copySize);
+    mm_free(oldptr);
+    return newptr;
+}
+
+
+/****** Static helper functions ******/
+/*
+ * coalesce - Coalesce adjacent free blocks
  */
 static void *coalesce(void *bp) {
     /* Whether adjacent blocks have been allocated */
@@ -142,12 +237,17 @@ static void *find_fit(size_t size) {
     char *ptr = heap_listp + WSIZE;
     
     /* Implicit free list with first fit */
-    while((ptr < mem_heap_hi) &&    /* Not passed end */
-            (GET_ALLOC(p) ||        /* Already allocated */
-            GET_SIZE(p) < size)) {  /* Too small */
-        p += GET_SIZE(p);
+    while(ptr < (char *)mem_heap_hi() &&    /* Not passed end */
+            (GET_ALLOC(ptr) ||              /* Already allocated */
+            GET_SIZE(ptr) < size)) {        /* Too small */
+        ptr += GET_SIZE(ptr);
     }
-    // TODO
+    
+    /* Return NULL if no free block is found */
+    if(ptr == mem_heap_hi())
+        return NULL;
+    else
+        return ptr;
 }
 
 /*
@@ -169,93 +269,26 @@ void place(void *ptr, size_t size) {
     else {
         PUT(HDRP(ptr), PACK(size, 1));
         PUT(HDRP(ptr), PACK(size, 1));
-        PUT(HDRP(NEXT_BLKP(ptr)), PACK(bsize - size), 0);
-        PUT(FTRP(NEXT_BLKP(ptr)), PACK(bsize - size), 0);
+        PUT(HDRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
+        PUT(FTRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
     }
 }
-
-
-/* 
- * mm_init - Initialize the malloc package.
- */
-int mm_init(void) {
-    /* Create the initial empty heap */
-    if((heap_listp = (char *)(mem_sbrk(4 * WSIZE))) == (char *)(-1))
-        return -1;
-    PUT(heap_listp, 0);                             /* Alignment padding */
-    PUT(heap_listp + 1 * WSIZE, PACK(DSIZE, 1));    /* Prologue header*/
-    PUT(heap_listp + 2 * WSIZE, PACK(DSIZE, 1));    /* Prologue footer*/
-    PUT(heap_listp + 3 * WSIZE, PACK(0, 1));        /* Epilogue header*/
-    heap_listp += (2 * WSIZE);
-
-    /* Extend the empty heap with a free block of CHUNKSIZE bytes */
-
-    return 0;
-}
-
-/* 
- * mm_malloc - Allocate a block by incrementing the brk pointer.
- *     Always allocate a block whose size is a multiple of the alignment.
- */
-void *mm_malloc(size_t size) {
-    size_t asize;                   /* Adjusted size */
-    size_t extendsize;              /* Amount to adjust if no fit */
-    char *bp;
-
-    /* Sanity check */
-    if(size == 0)
-        return NULL;
-    
-    /* Adjust block size to include overhead and alignment reqs */
-    if(size < DSIZE) {
-        asize = 2 * DSIZE;
-    } else {
-        asize = ALIGN(size + DSIZE);
-    }
-
-    /* Search the free list for a fit */
-    if((bp = find_fit(asize)) == NULL) {
-        return NULL;
-    }
-    place(bp, asize);
-    return bp;
-}
-
-/*
- * mm_free - Freeing a block.
- */
-void mm_free(void *ptr) {
-    /* Mark the block as free */
-    PUT(HDRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
-    PUT(FTRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
-    coalesce(ptr);
-}
-
-/*
- * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
- */
-void *mm_realloc(void *ptr, size_t size) {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
-    
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-        return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-        copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
-    return newptr;
-}
-
-
-
 
 
 
 /****** Consistency checker ******/
+/*
+ * mm_check - Check for heap consistency. Returns non-zero value 
+ *      if and only if consistent.
+ */
+static void mm_check() {
+    assert(mm_check_all_free());
+    assert(mm_check_no_contiguous_free());
+    assert(mm_check_free_in_list());
+    assert(mm_check_point_to_free());
+    assert(mm_check_overlap());
+    assert(mm_check_valid_addr());
+}
 /*
  * mm_check_all_free - Check if every block in the free list are
  *      marked as free.
@@ -268,6 +301,25 @@ static int mm_check_all_free() {
  *      free blocks that somehow escaped coalescing.
  */
 static int mm_check_no_contiguous_free() {
+    int prev_free = 0;              /* Is previous block free? */
+    char *ptr = heap_listp + DSIZE;
+
+    while(ptr < (char *)mem_heap_hi()) {
+        if(GET_ALLOC(HDRP(ptr))) {
+            /* If block is free, header and footer should be same */
+            assert(*HDRP(ptr) == *FTRP(ptr));
+            
+            if(prev_free) {
+                return 0;
+            }
+            prev_free = 1;
+        }
+
+        else {
+            prev_free = 0;
+        }
+        ptr = NEXT_BLKP(ptr);
+    }
     return 1;
 }
 /*
@@ -295,18 +347,5 @@ static int mm_check_overlap() {
  *      valid heap addresses.
  */
 static int mm_check_valid_addr() {
-    return 1;
-}
-/*
- * mm_check - Check for heap consistency. Returns non-zero value 
- *      if and only if consistent.
- */
-static int mm_check() {
-    assert(mm_check_all_free());
-    assert(mm_check_no_contiguous_free());
-    assert(mm_check_free_in_list());
-    assert(mm_check_point_to_free());
-    assert(mm_check_overlap());
-    assert(mm_check_valid_addr());
     return 1;
 }
