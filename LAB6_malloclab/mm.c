@@ -92,7 +92,7 @@ static void *coalesce(void *);
 static void *extend_heap(size_t);
 static void *find_fit(size_t);
 static void place(void *, size_t);
-static void *get_root(size_t);
+static int get_root_index(size_t);
 static void *get_block(size_t);
 static void put_block(void *);
 static void mm_check();
@@ -295,20 +295,20 @@ static void place(void *ptr, size_t size) {
 }
 
 /*
- * get_root - Given a free block size, return the corresponding segregated 
- *      list root.
+ * get_root - Given a free block size, return the index into the 
+ *      corresponding segregated list root.
  */
-static void *get_root(size_t size) {
+static int get_root_index(size_t size) {
     if(size <= 2) 
-        return (void *)roots[0];
+          return 0;
     else if(size <= 3)
-        return (void *)roots[1];
+        return 1;
     else if(size <= 4)
-        return (void *)roots[2];
+        return 2;
     else if(size <= 8)
-        return (void *)roots[3];
+        return 3;
     else
-        return (void *)roots[4];
+        return 4;
 }
 
 /*
@@ -317,8 +317,23 @@ static void *get_root(size_t size) {
  *      the block ptr.
  */
 static void *get_block(size_t size) {
-    // TODO
-    return NULL;
+    int root_index = get_root_index(size);
+    char *block_to_return;
+
+    /* If current block list is empty, move to next list */
+    while(root_index < 5 && roots[root_index] == NULL) {   
+        root_index++;
+    }
+
+    if(root_index == 5) {   /* No block is large enough */
+        block_to_return = NULL;
+    }
+    else {                  /* Otherwise remove first block from list */
+        block_to_return = roots[root_index];
+        PUTS(*block_to_return + 1 * WSIZE, NULL);
+        roots[root_index] = (char *)(*block_to_return);
+    }
+    return block_to_return;
 }
 
 /*
@@ -326,7 +341,36 @@ static void *get_block(size_t size) {
  *      list. Blocks in list are address-ordered.
  */
 static void put_block(void *bp) {
-    // TODO
+    int root_index = get_root_index(GET_SIZE(HDRP(bp)));
+    char *p = roots[root_index];
+
+    /* If this list is empty */
+    if(roots[root_index] == NULL) {     
+        roots[root_index] = bp;
+        PUTS(bp + 0 * WSIZE, NULL); 
+        PUTS(bp + 1 * WSIZE, NULL);
+    }
+
+    /* Address lower than any block in list, insert into head of list */
+    else if(bp < (void *)p) {
+        PUTS(bp + 0 * WSIZE, p); 
+        PUTS(bp + 1 * WSIZE, NULL);
+        PUTS(p + 1 * WSIZE, bp);
+        roots[root_index] = bp;
+    }
+
+    /* Search in list, and insert after free block pointed to by p */
+    else {
+        while((void *)(*p) != NULL &&   /* Not reached end */
+                bp > (void *)(*p)) {    /* Address-ordered */
+            p = *p;
+        }
+        /* Insert */
+        PUTS(bp + 0 * WSIZE, *p);
+        PUTS(bp + 1 * WSIZE, p);
+        if(*p) PUTS(*p + 1 * WSIZE, bp);    /* bp can be last block */
+        PUTS(p + 0 * WSIZE, bp);
+    }
 }
 
 

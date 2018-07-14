@@ -54,3 +54,4 @@ dkms.conf
 .vscode/
 csapp-labs/
 *.swp
+.DS_Store
