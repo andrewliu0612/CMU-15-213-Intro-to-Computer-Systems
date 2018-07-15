@@ -36,14 +36,14 @@ team_t team = {
 };
 
 /* single word (4) or double word (8) alignment */
-#define ALIGNMENT   8
+#define ALIGNMENT       8
 
 /* rounds up to the nearest multiple of ALIGNMENT */
-#define ALIGN(size) (((size) + (ALIGNMENT-1)) & ~0x7)
+#define ALIGN(size)     (((size) + (ALIGNMENT-1)) & ~0x7)
 
-#define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
+#define SIZE_T_SIZE     (ALIGN(sizeof(size_t)))
 
-#define DEBUG 1
+#define DEBUG           1
 
 
 /* Basic constants and macros */
@@ -96,13 +96,16 @@ static int get_root_index(size_t);
 static void *get_block(size_t);
 static void remove_block(void *);
 static void put_block(void *);
-static void mm_check();
+static int mm_check();
 static int mm_check_all_free();
 static int mm_check_no_contiguous_free();
 static int mm_check_free_in_list();
 static int mm_check_point_to_free();
 static int mm_check_overlap();
 static int mm_check_valid_addr();
+
+/* For debug */
+int malloc_index = 0;
 
 
 /* 
@@ -124,8 +127,9 @@ int mm_init(void) {
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if(extend_heap(CHUNKSIZE / WSIZE) == NULL)
         return -1;
+    
     if(DEBUG)
-        mm_check();
+        assert(mm_check());
     return 0;
 }
 
@@ -136,7 +140,8 @@ int mm_init(void) {
 void *mm_malloc(size_t size) {
     size_t asize;                   /* Adjusted size */
     size_t extendsize;              /* Amount to adjust if no fit */
-    char *bp;
+    char *bp;   
+    malloc_index++;
 
     /* Sanity check */
     if(size == 0)
@@ -157,7 +162,11 @@ void *mm_malloc(size_t size) {
         extendsize = asize - (prev_alloc ? 0 : prev_size);
         bp = (char *)extend_heap(extendsize / WSIZE);
     }
+    if(DEBUG)
+        assert(mm_check());
     place(bp, asize);
+    if(DEBUG)
+        assert(mm_check());
     return bp;
 }
 
@@ -173,6 +182,9 @@ void mm_free(void *ptr) {
     put_block(ptr);
 
     coalesce(ptr);
+
+    if(DEBUG)
+        assert(mm_check());
 }
 
 /*
@@ -191,13 +203,15 @@ void *mm_realloc(void *ptr, size_t size) {
         copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
+    if(DEBUG)
+        assert(mm_check());
     return newptr;
 }
 
 
 /****** Static helper functions ******/
 /*
- * coalesce - Coalesce adjacent free blocks
+ * coalesce - Coalesce adjacent free blocks.
  */
 static void *coalesce(void *bp) {
     /* Whether adjacent blocks have been allocated */
@@ -229,14 +243,15 @@ static void *coalesce(void *bp) {
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
 
-        put_block(bp);
+        put_block(PREV_BLKP(bp));
 
         bp = PREV_BLKP(bp);
     }
 
     else {                                  /* Case 4 */
-        remove_block(bp);
         remove_block(PREV_BLKP(bp));
+        remove_block(bp);
+        remove_block(NEXT_BLKP(bp));
 
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
@@ -246,6 +261,8 @@ static void *coalesce(void *bp) {
 
         bp = PREV_BLKP(bp);
     }
+    if(DEBUG)
+        assert(mm_check());
     return bp;
 }
 
@@ -267,7 +284,7 @@ static void *extend_heap(size_t words) {
     PUT(FTRP(bp), PACK(size, 0));                   /* Free block footer */
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));           /* New epilogue header */
 
-    /* Put the block into the free list */
+    /* Put the new block into the free list */
     put_block(bp);
 
     /* Return the block pointer of the possibly coalesced block */
@@ -307,6 +324,8 @@ static void place(void *ptr, size_t size) {
     size_t bsize;           /* Size of the free block */
     bsize = GET_SIZE(HDRP(ptr));
 
+    remove_block(ptr);
+
     /* No split */
     if(bsize - size < 2 * DSIZE) {
         PUT(HDRP(ptr), PACK(bsize, 1));
@@ -322,6 +341,7 @@ static void place(void *ptr, size_t size) {
 
         /* Put the block back into seglist */
         put_block(NEXT_BLKP(ptr));
+        assert(ptr != NEXT_BLKP(ptr));
     }
 }
 
@@ -344,8 +364,8 @@ static int get_root_index(size_t size) {
 
 /*
  * get_block - Given a free block size, find a block from corresponding
- *      segregated list root, and remove this block from the list. Return
- *      the block ptr.  
+ *      segregated list root, but do not remove this block from the list. 
+ *      Return the block ptr.  
  */
 static void *get_block(size_t size) {
     int root_index = get_root_index(size);
@@ -368,9 +388,9 @@ static void *get_block(size_t size) {
     if(root_index == 5)     /* No block found after traversing */
         return NULL;
 
-    if(*(unsigned int *)block_to_return)    /* Block not last one in list */
-        PUT(*(unsigned int *)block_to_return + 1 * WSIZE, 0);
-    roots[root_index] = (char *)(*(unsigned int *)block_to_return);
+    // if(*(unsigned int *)block_to_return)    /* Block not last one in list */
+    //     PUT(*(unsigned int *)block_to_return + 1 * WSIZE, 0);
+    // roots[root_index] = (char *)(*(unsigned int *)block_to_return);
     
     return block_to_return;
 }
@@ -388,7 +408,7 @@ static void remove_block(void *bp) {
         roots[get_root_index(size)] = (char *)*(unsigned int *)bp;
         /* If there are more blocks, set next block's prev bp to NULL */
         if(*(unsigned int *)bp)
-            PUT(*(unsigned int *)bp, 0);
+            PUT(*(unsigned int *)bp + WSIZE, 0);
     }
     else {
         /* Traverse through list */
@@ -430,11 +450,15 @@ static void put_block(void *bp) {
                 bp > (void *)(*(unsigned int *)p)) {    /* Address-ordered */
             p = (char *)*(unsigned int *)p;
         }
+        assert((*(unsigned int *)p != *(unsigned int *)bp) || *(unsigned int *)p == 0);  // TODO: Block fails from being removed
         /* Insert */
-        PUT(bp + 0 * WSIZE, *p);
-        PUT(bp + 1 * WSIZE, (unsigned int)p);
-        if(*p) PUT(*p + 1 * WSIZE, (unsigned int)bp);    /* bp can be last block */
+        PUT((char *)bp + 0 * WSIZE, *(unsigned int *)p);
+        PUT((char *)bp + 1 * WSIZE, (unsigned int)p);
+        if(*(unsigned int *)p)                          /* bp can be last block */
+            PUT(*(unsigned int *)p + 1 * WSIZE, (unsigned int)bp);  
         PUT(p + 0 * WSIZE, (unsigned int)bp);
+        assert((char *)bp != (char *)*(unsigned int *)bp);
+        assert((char *)p != (char *)*(unsigned int *)p);
     }
 }
 
@@ -444,19 +468,53 @@ static void put_block(void *bp) {
  * mm_check - Check for heap consistency. Returns non-zero value 
  *      if and only if consistent.
  */
-static void mm_check() {
-    assert(mm_check_all_free());
-    assert(mm_check_no_contiguous_free());
-    assert(mm_check_free_in_list());
-    assert(mm_check_point_to_free());
-    assert(mm_check_overlap());
-    assert(mm_check_valid_addr());
+static int mm_check() {
+    if(mm_check_all_free() == 0) {
+        fprintf(stderr, "ERROR: mm_check_all_free() failed.\n");
+        return 0;
+    }
+    if(mm_check_no_contiguous_free() == 0) {
+        fprintf(stderr, "ERROR: mm_check_no_contiguous_free() failed.\n");
+        return 0;
+    }
+    if(mm_check_free_in_list() == 0) {
+        fprintf(stderr, "ERROR: mm_check_free_in_list() failed.\n");
+        return 0;
+    }
+    if(mm_check_point_to_free() == 0) {
+        fprintf(stderr, "ERROR: mm_check_point_to_free() failed.\n");
+        return 0;
+    }
+    if(mm_check_overlap() == 0) {
+        fprintf(stderr, "ERROR: mm_check_overlap() failed.\n");
+        return 0;
+    }
+    if(mm_check_valid_addr() == 0) {
+        fprintf(stderr, "ERROR: mm_check_valid_addr() failed.\n");
+        return 0;
+    }
+    return 1;
 }
 /*
  * mm_check_all_free - Check if every block in the free list are
  *      marked as free.
  */
 static int mm_check_all_free() {
+    int root_index;
+    void *p;
+
+    for(root_index = 0; root_index < 5; ++root_index) {
+        p = roots[root_index];
+        while(p != NULL) {
+            /* Make sure the block is free */
+            if(GET_ALLOC(HDRP(p)) || GET_ALLOC(FTRP(p)))
+                return 0;
+            /* Make sure list is acyclic */
+            if(p == (void *)*(unsigned int *)p)
+                return 0;
+            p = (void *)*(unsigned int *)p;
+        }
+    }
     return 1;
 }
 /*
@@ -468,9 +526,9 @@ static int mm_check_no_contiguous_free() {
     char *ptr = heap_listp + DSIZE;
 
     while(ptr < (char *)mem_heap_hi()) {
-        if(GET_ALLOC(HDRP(ptr))) {
+        if(GET_ALLOC(HDRP(ptr)) == 0) {
             /* If block is free, header and footer should be same */
-            assert(*HDRP(ptr) == *FTRP(ptr));
+            assert(*(unsigned int *)HDRP(ptr) == *(unsigned int *)FTRP(ptr));
             
             if(prev_free) {
                 return 0;
@@ -497,6 +555,7 @@ static int mm_check_free_in_list() {
  *      to valid free blocks.
  */
 static int mm_check_point_to_free() {
+    // TODO
     return 1;
 }
 /*
