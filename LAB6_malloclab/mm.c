@@ -353,7 +353,7 @@ static void *get_block(size_t size) {
 
     /* Remove first block from list large enough */
     /* If no block is found in a list, move to next list */
-    while(root_index < 5) {
+    for(; root_index < 5; ++root_index) {
         block_to_return = (void *)roots[root_index];
         
         while(block_to_return &&                        /* Not reached end */
