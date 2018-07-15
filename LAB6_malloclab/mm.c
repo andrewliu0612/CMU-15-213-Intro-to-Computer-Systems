@@ -43,7 +43,7 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
-#define DEBUG 0
+#define DEBUG 1
 
 
 /* Basic constants and macros */
@@ -94,6 +94,7 @@ static void *find_fit(size_t);
 static void place(void *, size_t);
 static int get_root_index(size_t);
 static void *get_block(size_t);
+static void remove_block(void *);
 static void put_block(void *);
 static void mm_check();
 static int mm_check_all_free();
@@ -117,6 +118,9 @@ int mm_init(void) {
     PUT(heap_listp + 3 * WSIZE, PACK(0, 1));        /* Epilogue header*/
     heap_listp += (2 * WSIZE);
 
+    /* Initialize all seglist roots to NULL */
+    memset((void *)roots, 0, SEGLISTCOUNT * sizeof(char *));
+
     /* Extend the empty heap with a free block of CHUNKSIZE bytes */
     if(extend_heap(CHUNKSIZE / WSIZE) == NULL)
         return -1;
@@ -137,9 +141,6 @@ void *mm_malloc(size_t size) {
     /* Sanity check */
     if(size == 0)
         return NULL;
-    
-    /* Initialize all seglist roots to NULL */
-    memset((void *)roots, 0, SEGLISTCOUNT * sizeof(char *));
     
     /* Adjust block size to include overhead and alignment reqs */
     if(size < DSIZE) {
@@ -167,6 +168,10 @@ void mm_free(void *ptr) {
     /* Mark the block as free */
     PUT(HDRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
     PUT(FTRP(ptr), PACK(GET_SIZE(HDRP(ptr)), 0));
+
+    /* Put the block back into seglist */
+    put_block(ptr);
+
     coalesce(ptr);
 }
 
@@ -206,22 +211,39 @@ static void *coalesce(void *bp) {
     }
 
     else if(prev_alloc && !next_alloc) {    /* Case 2 */
+        remove_block(bp);
+        remove_block(NEXT_BLKP(bp));
+        
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
+        
+        put_block(bp);
     }
 
     else if(!prev_alloc && next_alloc) {    /* Case 3 */
+        remove_block(PREV_BLKP(bp));
+        remove_block(bp);
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
+        
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FTRP(bp), PACK(size, 0));
+
+        put_block(bp);
+
         bp = PREV_BLKP(bp);
     }
 
     else {                                  /* Case 4 */
+        remove_block(bp);
+        remove_block(PREV_BLKP(bp));
+
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(PREV_BLKP(bp)), PACK(size, 0));
         PUT(FTRP(NEXT_BLKP(bp)), PACK(size, 0));
+
+        put_block(PREV_BLKP(bp));
+
         bp = PREV_BLKP(bp);
     }
     return bp;
@@ -245,6 +267,9 @@ static void *extend_heap(size_t words) {
     PUT(FTRP(bp), PACK(size, 0));                   /* Free block footer */
     PUT(HDRP(NEXT_BLKP(bp)), PACK(0, 1));           /* New epilogue header */
 
+    /* Put the block into the free list */
+    put_block(bp);
+
     /* Return the block pointer of the possibly coalesced block */
     return coalesce(bp);
 }
@@ -253,21 +278,24 @@ static void *extend_heap(size_t words) {
  * find_fit - Find a free block satisfying size reqs.
  */
 static void *find_fit(size_t size) {
-    char *ptr = heap_listp + DSIZE;
+    // char *ptr = heap_listp + DSIZE;
     
-    /* Implicit free list with first fit */
-    while(ptr < (char *)mem_heap_hi() &&        /* Not passed end */
-            (GET_ALLOC(HDRP(ptr)) ||            /* Already allocated */
-            GET_SIZE(HDRP(ptr)) < size)) {      /* Too small */
-        ptr += GET_SIZE(HDRP(ptr));
-    }
+    // /* Implicit free list with first fit */
+    // while(ptr < (char *)mem_heap_hi() &&        /* Not passed end */
+    //         (GET_ALLOC(HDRP(ptr)) ||            /* Already allocated */
+    //         GET_SIZE(HDRP(ptr)) < size)) {      /* Too small */
+    //     ptr += GET_SIZE(HDRP(ptr));
+    // }
     
-    /* Return NULL if no free block is found */
-    if(ptr == (char *)mem_heap_hi() + 1)
-        return NULL;
-    else
-        /* Return block ptr, not start of this block */
-        return ptr; 
+    // /* Return NULL if no free block is found */
+    // if(ptr == (char *)mem_heap_hi() + 1)
+    //     return NULL;
+    // else
+    //     /* Return block ptr, not start of this block */
+    //     return ptr; 
+
+    /* Use get_block() for segregated lists */
+    return get_block(size);
 }
 
 /*
@@ -291,6 +319,9 @@ static void place(void *ptr, size_t size) {
         PUT(FTRP(ptr), PACK(size, 1));
         PUT(HDRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
         PUT(FTRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
+
+        /* Put the block back into seglist */
+        put_block(NEXT_BLKP(ptr));
     }
 }
 
@@ -314,26 +345,60 @@ static int get_root_index(size_t size) {
 /*
  * get_block - Given a free block size, find a block from corresponding
  *      segregated list root, and remove this block from the list. Return
- *      the block ptr.
+ *      the block ptr.  
  */
 static void *get_block(size_t size) {
     int root_index = get_root_index(size);
-    char *block_to_return;
+    void *block_to_return;
 
-    /* If current block list is empty, move to next list */
-    while(root_index < 5 && roots[root_index] == NULL) {   
-        root_index++;
+    /* Remove first block from list large enough */
+    /* If no block is found in a list, move to next list */
+    while(root_index < 5) {
+        block_to_return = (void *)roots[root_index];
+        
+        while(block_to_return &&                        /* Not reached end */
+                GET_SIZE(HDRP(block_to_return)) < size) {   /* Large enough */
+            block_to_return = (void *)*(unsigned int *)block_to_return;
+        }
+        
+        if(block_to_return)
+            break;
     }
 
-    if(root_index == 5) {   /* No block is large enough */
-        block_to_return = NULL;
-    }
-    else {                  /* Otherwise remove first block from list */
-        block_to_return = roots[root_index];
-        PUTS(*block_to_return + 1 * WSIZE, NULL);
-        roots[root_index] = (char *)(*block_to_return);
-    }
+    if(root_index == 5)     /* No block found after traversing */
+        return NULL;
+
+    if(*(unsigned int *)block_to_return)    /* Block not last one in list */
+        PUT(*(unsigned int *)block_to_return + 1 * WSIZE, 0);
+    roots[root_index] = (char *)(*(unsigned int *)block_to_return);
+    
     return block_to_return;
+}
+
+/*
+ * remove_block - Remove a free block from the seglist given block ptr.
+ *      This function is called by coalesce().
+ */
+static void remove_block(void *bp) {
+    size_t size = GET_SIZE(HDRP(bp));
+    char *p = roots[get_root_index(size)];
+
+    /* If block is head of list */
+    if((char *)bp == p) {
+        roots[get_root_index(size)] = (char *)*(unsigned int *)bp;
+        /* If there are more blocks, set next block's prev bp to NULL */
+        if(*(unsigned int *)bp)
+            PUT(*(unsigned int *)bp, 0);
+    }
+    else {
+        /* Traverse through list */
+        while((void *)*(unsigned int *)p != bp)
+            p = (char *)*(unsigned int *)p;
+        /* Remove the block after the block pointed to by p */
+        PUT(p, *(unsigned int *)bp);
+        if(*(unsigned int *)bp)
+            PUT(*(unsigned int *)bp + WSIZE, (unsigned int)p);
+    }
 }
 
 /*
@@ -347,29 +412,29 @@ static void put_block(void *bp) {
     /* If this list is empty */
     if(roots[root_index] == NULL) {     
         roots[root_index] = bp;
-        PUTS(bp + 0 * WSIZE, NULL); 
-        PUTS(bp + 1 * WSIZE, NULL);
+        PUT((char *)bp + 0 * WSIZE, 0); 
+        PUT((char *)bp + 1 * WSIZE, 0);
     }
 
     /* Address lower than any block in list, insert into head of list */
     else if(bp < (void *)p) {
-        PUTS(bp + 0 * WSIZE, p); 
-        PUTS(bp + 1 * WSIZE, NULL);
-        PUTS(p + 1 * WSIZE, bp);
+        PUT((char *)bp + 0 * WSIZE, (unsigned int)p); 
+        PUT((char *)bp + 1 * WSIZE, 0);
+        PUT(p + 1 * WSIZE, (unsigned int)bp);
         roots[root_index] = bp;
     }
 
     /* Search in list, and insert after free block pointed to by p */
     else {
-        while((void *)(*p) != NULL &&   /* Not reached end */
-                bp > (void *)(*p)) {    /* Address-ordered */
-            p = *p;
+        while((void *)(*(unsigned int *)p) != NULL &&   /* Not reached end */
+                bp > (void *)(*(unsigned int *)p)) {    /* Address-ordered */
+            p = (char *)*(unsigned int *)p;
         }
         /* Insert */
-        PUTS(bp + 0 * WSIZE, *p);
-        PUTS(bp + 1 * WSIZE, p);
-        if(*p) PUTS(*p + 1 * WSIZE, bp);    /* bp can be last block */
-        PUTS(p + 0 * WSIZE, bp);
+        PUT(bp + 0 * WSIZE, *p);
+        PUT(bp + 1 * WSIZE, (unsigned int)p);
+        if(*p) PUT(*p + 1 * WSIZE, (unsigned int)bp);    /* bp can be last block */
+        PUT(p + 0 * WSIZE, (unsigned int)bp);
     }
 }
 
