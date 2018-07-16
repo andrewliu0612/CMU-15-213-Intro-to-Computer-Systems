@@ -43,7 +43,7 @@ team_t team = {
 
 #define SIZE_T_SIZE     (ALIGN(sizeof(size_t)))
 
-#define DEBUG           1
+#define DEBUG           0
 
 
 /* Basic constants and macros */
@@ -162,11 +162,8 @@ void *mm_malloc(size_t size) {
         extendsize = asize - (prev_alloc ? 0 : prev_size);
         bp = (char *)extend_heap(extendsize / WSIZE);
     }
-    if(DEBUG)
-        assert(mm_check());
+
     place(bp, asize);
-    if(DEBUG)
-        assert(mm_check());
     return bp;
 }
 
@@ -203,8 +200,6 @@ void *mm_realloc(void *ptr, size_t size) {
         copySize = size;
     memcpy(newptr, oldptr, copySize);
     mm_free(oldptr);
-    if(DEBUG)
-        assert(mm_check());
     return newptr;
 }
 
@@ -276,6 +271,10 @@ static void *extend_heap(size_t words) {
 
     /* Allocate an even number of words to maintain alignment */
     size = (words % 2) ? ((words + 1) * WSIZE) : (words * WSIZE);
+
+    /* Free block should be at least 16 bytes large */
+    size = size < 16 ? 16 : size;
+
     if((long)(bp = (char *)mem_sbrk(size)) == -1)   /* mem_sbrk() failed */
         return NULL;
     
@@ -324,6 +323,9 @@ static void place(void *ptr, size_t size) {
     size_t bsize;           /* Size of the free block */
     bsize = GET_SIZE(HDRP(ptr));
 
+    if(DEBUG)
+        assert(mm_check());
+
     remove_block(ptr);
 
     /* No split */
@@ -333,15 +335,17 @@ static void place(void *ptr, size_t size) {
     }
 
     /* Split */
-    else {
+    else { 
         PUT(HDRP(ptr), PACK(size, 1));
         PUT(FTRP(ptr), PACK(size, 1));
         PUT(HDRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
         PUT(FTRP(NEXT_BLKP(ptr)), PACK(bsize - size, 0));
 
+        if(DEBUG)
+            assert(mm_check());
+
         /* Put the block back into seglist */
         put_block(NEXT_BLKP(ptr));
-        assert(ptr != NEXT_BLKP(ptr));
     }
 }
 
@@ -450,15 +454,15 @@ static void put_block(void *bp) {
                 bp > (void *)(*(unsigned int *)p)) {    /* Address-ordered */
             p = (char *)*(unsigned int *)p;
         }
-        assert((*(unsigned int *)p != *(unsigned int *)bp) || *(unsigned int *)p == 0);  // TODO: Block fails from being removed
+        // assert((*(unsigned int *)p != *(unsigned int *)bp) || *(unsigned int *)p == 0);  // TODO: Block fails from being removed
         /* Insert */
         PUT((char *)bp + 0 * WSIZE, *(unsigned int *)p);
         PUT((char *)bp + 1 * WSIZE, (unsigned int)p);
         if(*(unsigned int *)p)                          /* bp can be last block */
             PUT(*(unsigned int *)p + 1 * WSIZE, (unsigned int)bp);  
         PUT(p + 0 * WSIZE, (unsigned int)bp);
-        assert((char *)bp != (char *)*(unsigned int *)bp);
-        assert((char *)p != (char *)*(unsigned int *)p);
+        // assert((char *)bp != (char *)*(unsigned int *)bp);
+        // assert((char *)p != (char *)*(unsigned int *)p);
     }
 }
 
@@ -528,7 +532,7 @@ static int mm_check_no_contiguous_free() {
     while(ptr < (char *)mem_heap_hi()) {
         if(GET_ALLOC(HDRP(ptr)) == 0) {
             /* If block is free, header and footer should be same */
-            assert(*(unsigned int *)HDRP(ptr) == *(unsigned int *)FTRP(ptr));
+            // assert(*(unsigned int *)HDRP(ptr) == *(unsigned int *)FTRP(ptr));
             
             if(prev_free) {
                 return 0;
@@ -555,7 +559,18 @@ static int mm_check_free_in_list() {
  *      to valid free blocks.
  */
 static int mm_check_point_to_free() {
-    // TODO
+    int root_index;
+    char *p;
+
+    for(root_index = 0; root_index < 5; ++root_index) {
+        p = roots[root_index];
+        while(p != NULL) {
+            if(GET_ALLOC(HDRP(p)) || GET_ALLOC(FTRP(p)))
+                return 0;
+
+            p = (char *)*(unsigned int *)p;
+        }
+    }
     return 1;
 }
 /*
