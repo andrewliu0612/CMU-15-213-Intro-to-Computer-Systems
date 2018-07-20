@@ -583,7 +583,7 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * Singly-linked list cannot free previous block in constant time
         * Fix: Doubly-linked list (head and footer)
         * Optimization: 
-            * Allocated blocks doesn't need coalescing
+            * Allocated blocks doesn't need coalescing
             * We have extra bits to encode whether previous block is allocated  
             * So, allocated blocks doesn't need footer
     * Implicit lists are not commonly used because of linear time. However, the concepts of splitting and coalescing are general to __all__ allcators
@@ -606,3 +606,22 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         * _Mark_: Start at root nodes and do DFS
         * _Sweep_: Start at beginning of VM, and free unmarked blocks
         * How to find beginning of block? -- Use a balanced tree
+
+# Network Programming
+* Client-Server Architecture
+* Network Architecture
+    * Routers set borders of LANs
+    * Conceptual view of LANs:  
+        <img src="Note_Images/LAN.png" width=20%>  
+* Socket
+    * To the kernel: An endpoint of communication
+    * To application: A file descriptor to write/read
+    * Generic socket address:  
+        <img src="Note_Images/socket_generic.png" width=80%>  
+    * IPv4 specific socket address:  
+        <img src="Note_Images/socket_ipv4.png" width=80%>   
+* Host and Service Conversion: `getaddrinfo`
+    * Convert string representations of hostnames, host addresses, ports and service names to socket address structures  
+        <img src="Note_Images/getaddrinfo.png" width=80%>   
+        <img src="Note_Images/addrinfo.png" width=80%>   
+    * `getnameinfo` is the inverse of `getaddrinfo`
