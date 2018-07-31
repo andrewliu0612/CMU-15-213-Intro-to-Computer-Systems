@@ -625,3 +625,5 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
         <img src="Note_Images/getaddrinfo.png" width=80%>   
         <img src="Note_Images/addrinfo.png" width=80%>   
     * `getnameinfo` is the inverse of `getaddrinfo`
+* Client/Server interface  
+    <img src="Note_Images/client_server.png" width=80%>   
