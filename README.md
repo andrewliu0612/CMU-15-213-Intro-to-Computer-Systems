@@ -627,3 +627,14 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * `getnameinfo` is the inverse of `getaddrinfo`
 * Client/Server interface  
     <img src="Note_Images/client_server.png" width=80%>   
+* `telnet`: Testing servers
+    * Creates TCP connection with a server (starts a session)
+    * Since the encoding of HTTP is ascii, we can hard-code http requests
+* HTTP
+    * Content: A sequence of bytes in MIME (Multipurpose Internet Mail Extension) type
+    * The contents can be either _static_ or _dynamic_
+* Dynamic content: 
+    * Produced by server-side program
+    * If URI containts `cgi-bin` then serve dynamic content
+    * Use `fork()` and `exec()` to execute new program
+    * Use env-var `QUERY_STRING` to pass parameters
