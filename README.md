@@ -638,3 +638,21 @@ Notes and labs for the course 15-213 Introduction to Computer Systems at CMU
     * If URI containts `cgi-bin` then serve dynamic content
     * Use `fork()` and `exec()` to execute new program
     * Use env-var `QUERY_STRING` to pass parameters
+# Concurrency
+* Iterative servers have serious flaws. 
+    * Easily get blocked by single misbehaving client
+        * Note: Blocking does not happen upon client calling `connect()` or `write()`, but upon `read()`. This is because server's kernel provides buffering
+    * So we need concurrent servers
+1. Process-based servers
+    * Parent __must__ close connected socket (parent doesn't get reaped)
+    * Child __should__ close listening socket (child gets reaped)
+    * Reap child with `SIGCHLD` handler
+2. Event-based servers
+    * Manage multiple connections in user space 
+    * Determine events using `select()` or `epoll()`
+    * Design of choice for high-performance web servers
+    * However, hard to provide find-grained concurrency
+    * Cannot take advantage of multi-core
+3. Thread-based servers
+    * Can run threads in `detached` mode. It will run independently, and get reaped automatically
+    * Possible race conditions when passing parameters to new thread in `pthread_create()`
