@@ -1040,7 +1040,7 @@ int Open_clientfd(char *hostname, char *port)
     int rc;
 
     if ((rc = open_clientfd(hostname, port)) < 0) 
-	unix_error("Open_clientfd error");
+	    unix_error("Open_clientfd error");
     return rc;
 }
 
@@ -1049,7 +1049,7 @@ int Open_listenfd(char *port)
     int rc;
 
     if ((rc = open_listenfd(port)) < 0)
-	unix_error("Open_listenfd error");
+	    unix_error("Open_listenfd error");
     return rc;
 }
 
