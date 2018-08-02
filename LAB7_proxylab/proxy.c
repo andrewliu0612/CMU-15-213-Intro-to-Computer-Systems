@@ -64,6 +64,8 @@ void process_request(int clientfd) {
     char buf_old[MAXLINE], buf_new[MAXLINE];            /* Request buffer */
     char method[MAXLINE], uri[MAXLINE], version[MAXLINE];
     char hostname[MAXLINE], port[MAXLINE];              /* Buffer for establishing new connection */
+    memset(hostname, 0, MAXLINE * sizeof(char));        /* Keep getaddrinfo() happy */
+    memset(port, 0, MAXLINE * sizeof(char));
     
     /* Read request line and headers */
     Rio_readinitb(&rio_client, clientfd);
@@ -94,7 +96,7 @@ void process_request(int clientfd) {
     Rio_readinitb(&rio_server, serverfd);
     printf("\nServer response:\n");
     while (Rio_readlineb(&rio_server, buf_old, MAXLINE)) {
-        printf("%s", buf_old);
+        // printf("%s", buf_old);
         Rio_writen(clientfd, buf_old, strlen(buf_old));
     }
 
@@ -187,16 +189,24 @@ void rebuild_request(const char *buf, char *result) {
 void parse_uri(const char *uri, char *hostname, char *port) {
 
     const char *hostname_cursor, *port_cursor;
+    int is_https = 0;
     
     /* Move hostname cursor to hostname */
-    if(strncmp(uri, "http://", strlen("http://")) == 0)
+    if(strncmp(uri, "http://", strlen("http://")) == 0) {
         hostname_cursor = uri + strlen("http://");
+    }
+    else if(strncmp(uri, "https://", strlen("https://")) == 0) {
+        hostname_cursor = uri + strlen("https://");
+        is_https = 1;
+    }
+    else {
+        exit(1);           /* You shouldn't get here */ 
+    }
     
     /* Move port cursor to port */
     port_cursor = hostname_cursor;
     while(*port_cursor && *port_cursor != ':')
         port_cursor++;
-    port_cursor++;
 
     /* Fill hostname */
     memset(hostname, 0, MAXLINE * sizeof(char));
@@ -205,9 +215,11 @@ void parse_uri(const char *uri, char *hostname, char *port) {
     /* Fill port */
     memset(port, 0, MAXLINE * sizeof(char));
     if(*port_cursor)                /* URI contains port */
-        strcpy(port, port_cursor);
-    else
+        strcpy(port, port_cursor + 1);
+    else if(!is_https)
         strcpy(port, "80");         /* Default HTTP port */
+    else    
+        strcpy(port, "443");         /* Default HTTPS port */
     
     /* Remove possible trailing backslash and path to make getaddrinfo() happy */
     char *p;
