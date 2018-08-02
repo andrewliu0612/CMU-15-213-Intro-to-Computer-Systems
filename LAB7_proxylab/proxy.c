@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
         connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);
         Getnameinfo((SA *) &clientaddr, clientlen, hostname, MAXLINE, 
                     port, MAXLINE, 0);
-        printf("Accepted connection from (%s, %s)\n", hostname, port);
+        printf("\nAccepted connection from (%s, %s)\n", hostname, port);
 
         /* Process this single HTTP request */
         process_request(connfd);
@@ -64,6 +64,7 @@ void process_request(int clientfd) {
     char buf_old[MAXLINE], buf_new[MAXLINE];            /* Request buffer */
     char method[MAXLINE], uri[MAXLINE], version[MAXLINE];
     char hostname[MAXLINE], port[MAXLINE];              /* Buffer for establishing new connection */
+    size_t read_bytes;
     memset(hostname, 0, MAXLINE * sizeof(char));        /* Keep getaddrinfo() happy */
     memset(port, 0, MAXLINE * sizeof(char));
     
@@ -89,15 +90,15 @@ void process_request(int clientfd) {
     /* Rebuild HTTP request and send to server */
     rebuild_request(buf_old, buf_new);
     Rio_writen(serverfd, buf_new, strlen(buf_new));
-    printf("\nNew headers:\n");
+    printf("New headers:\n");
     printf("%s", buf_new);
 
-    /* Forward reponse from server to client */
+    /* Forward everything from server to client */
     Rio_readinitb(&rio_server, serverfd);
-    printf("\nServer response:\n");
-    while (Rio_readlineb(&rio_server, buf_old, MAXLINE)) {
+    // printf("\nServer response:\n");
+    while ((read_bytes = Rio_readnb(&rio_server, buf_old, MAXLINE))) {
         // printf("%s", buf_old);
-        Rio_writen(clientfd, buf_old, strlen(buf_old));
+        Rio_writen(clientfd, buf_old, read_bytes);
     }
 
 }
@@ -210,7 +211,7 @@ void parse_uri(const char *uri, char *hostname, char *port) {
 
     /* Fill hostname */
     memset(hostname, 0, MAXLINE * sizeof(char));
-    strncpy(hostname, hostname_cursor, port_cursor - hostname_cursor - 1);
+    strncpy(hostname, hostname_cursor, port_cursor - hostname_cursor);
 
     /* Fill port */
     memset(port, 0, MAXLINE * sizeof(char));
