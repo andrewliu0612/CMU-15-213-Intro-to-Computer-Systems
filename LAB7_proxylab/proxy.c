@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <assert.h>
 
 #include "csapp.h"
 
@@ -13,14 +14,14 @@ static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64;
 
 /* Forward declarations */
 void process_request(int fd);
-int parse_uri(char *uri, char *filename, char *cgiargs);
 void clienterror(int fd, char *cause, char *errnum, 
 		 char *shortmsg, char *longmsg);
 void read_requesthdrs(rio_t *rp);
+void rebuild_request(const char *buf, char *result);
+void parse_uri(const char *uri, char *hostname, char *port);
 
 
 
-/* Start server main routine */
 int main(int argc, char **argv) {
     
     int listenfd, connfd;                   /* File descriptors */
@@ -48,9 +49,9 @@ int main(int argc, char **argv) {
 
         /* Process this single HTTP request */
         process_request(connfd);
+        Close(connfd);
     }
 }
-/* End server main routine */
 
 
 
@@ -58,33 +59,45 @@ int main(int argc, char **argv) {
  */
 void process_request(int clientfd) {
 
-    rio_t rio;
-    int serverfd;           /* fd for host server */ 
+    rio_t rio_client, rio_server;
+    int serverfd;                                       /* fd for host server */ 
     char buf_old[MAXLINE], buf_new[MAXLINE];            /* Request buffer */
     char method[MAXLINE], uri[MAXLINE], version[MAXLINE];
     char hostname[MAXLINE], port[MAXLINE];              /* Buffer for establishing new connection */
     
     /* Read request line and headers */
-    Rio_readinitb(&rio, clientfd);
-    if (!Rio_readlineb(&rio, buf_old, MAXLINE))
+    Rio_readinitb(&rio_client, clientfd);
+    if (!Rio_readlineb(&rio_client, buf_old, MAXLINE))
         return;
     printf("%s", buf_old);
     sscanf(buf_old, "%s %s %s", method, uri, version);
-    if (strcasecmp(method, "GET")) {            /* Method should only be GET */
+    if (strcasecmp(method, "GET")) {                    /* Method should only be GET */
         clienterror(clientfd, method, "501", "Not Implemented",
                     "Tiny does not implement this method");
         return;
     }
 
     /* Read HTTP request body. Doesn't actually do anything, just clears buffer. */
-    read_requesthdrs(&rio);
-
-    /* Rebuild HTTP request. Write new request to buffer */
-    rebuild_request(buf_old, buf_new);
+    read_requesthdrs(&rio_client);
 
     /* Create new connfd for host server */
     parse_uri(uri, hostname, port);
     serverfd = Open_clientfd(hostname, port);
+
+    /* Rebuild HTTP request and send to server */
+    rebuild_request(buf_old, buf_new);
+    Rio_writen(serverfd, buf_new, strlen(buf_new));
+    printf("\nNew headers:\n");
+    printf("%s", buf_new);
+
+    /* Forward reponse from server to client */
+    Rio_readinitb(&rio_server, serverfd);
+    printf("\nServer response:\n");
+    while (Rio_readlineb(&rio_server, buf_old, MAXLINE)) {
+        printf("%s", buf_old);
+        Rio_writen(clientfd, buf_old, strlen(buf_old));
+    }
+
 }
 
 
@@ -119,7 +132,7 @@ void read_requesthdrs(rio_t *rp) {
     printf("%s", buf);
     while(strcmp(buf, "\r\n")) {
         Rio_readlineb(rp, buf, MAXLINE);
-        // printf("%s", buf);
+        printf("%s", buf);
     }
     return;
 }
@@ -144,20 +157,25 @@ void rebuild_request(const char *buf, char *result) {
     sscanf(buf, "%s %s %s", method, uri, version);
 
     /* Split uri into hostname/path */
-    assert(strncmp(uri, "http://", strlen("http://")) == 0);    /* Should begin with http:// */
-    cursor = uri + strlen("http://");
+    if(strncmp(uri, "http://", strlen("http://")) == 0)
+        cursor = uri + strlen("http://");
+    else if(strncmp(uri, "https://", strlen("https://")) == 0)
+        cursor = uri + strlen("https://");
+    else
+        return;     /* Should begin with http:// or https:// */
+        
     while(*cursor != '/')
         cursor++;
     
 
     /* Fill into result array */
     sprintf(result, "%s", method);
-    sprintf(result, "%s%s", result, cursor);
-    sprintf(result, "%s%s\r\n", result, "HTTP/1.0");
+    sprintf(result, "%s %s", result, cursor);
+    sprintf(result, "%s %s\r\n", result, "HTTP/1.0");
     *cursor = 0; sprintf(result, "%sHost: %s\r\n", result, uri + strlen("http://"));
     sprintf(result, "%s%s", result, user_agent_hdr);
     sprintf(result, "%sConnection: close\r\n", result);
-    sprintf(result, "%sProxy-Connection: close\r\n", result);
+    sprintf(result, "%sProxy-Connection: close\r\n\r\n", result);
 
 }
 
@@ -168,11 +186,11 @@ void rebuild_request(const char *buf, char *result) {
  */
 void parse_uri(const char *uri, char *hostname, char *port) {
 
-    char *hostname_cursor, *port_cursor;
+    const char *hostname_cursor, *port_cursor;
     
     /* Move hostname cursor to hostname */
     if(strncmp(uri, "http://", strlen("http://")) == 0)
-        hostname_cursor = uri + strlen("http_uri");
+        hostname_cursor = uri + strlen("http://");
     
     /* Move port cursor to port */
     port_cursor = hostname_cursor;
@@ -190,4 +208,9 @@ void parse_uri(const char *uri, char *hostname, char *port) {
         strcpy(port, port_cursor);
     else
         strcpy(port, "80");         /* Default HTTP port */
+    
+    /* Remove possible trailing backslash and path to make getaddrinfo() happy */
+    char *p;
+    for(p = hostname; *p != '/'; ++p);
+    *p = 0;
 }
