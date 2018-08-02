@@ -13,7 +13,7 @@ static const char *user_agent_hdr = "User-Agent: Mozilla/5.0 (X11; Linux x86_64;
 
 
 /* Forward declarations */
-void process_request(int fd);
+void *process_request(void *fd);
 void clienterror(int fd, char *cause, char *errnum, 
 		 char *shortmsg, char *longmsg);
 void read_requesthdrs(rio_t *rp);
@@ -48,8 +48,10 @@ int main(int argc, char **argv) {
         printf("\nAccepted connection from (%s, %s)\n", hostname, port);
 
         /* Process this single HTTP request */
-        process_request(connfd);
-        Close(connfd);
+        // process_request(connfd);
+        pthread_t thread;
+        pthread_create(&thread, NULL, process_request, (void *)(long)connfd);
+        // Close(connfd);
     }
 }
 
@@ -57,9 +59,12 @@ int main(int argc, char **argv) {
 
 /* process - Process one HTTP proxy request.
  */
-void process_request(int clientfd) {
+void *process_request(void *fd) {
+
+    pthread_detach(pthread_self());                     /* Run in detached mode */
 
     rio_t rio_client, rio_server;
+    int clientfd = (int)(long)fd;
     int serverfd;                                       /* fd for host server */ 
     char buf_old[MAXLINE], buf_new[MAXLINE];            /* Request buffer */
     char method[MAXLINE], uri[MAXLINE], version[MAXLINE];
@@ -71,13 +76,13 @@ void process_request(int clientfd) {
     /* Read request line and headers */
     Rio_readinitb(&rio_client, clientfd);
     if (!Rio_readlineb(&rio_client, buf_old, MAXLINE))
-        return;
+        return (void *)(-1);
     printf("%s", buf_old);
     sscanf(buf_old, "%s %s %s", method, uri, version);
     if (strcasecmp(method, "GET")) {                    /* Method should only be GET */
         clienterror(clientfd, method, "501", "Not Implemented",
                     "Tiny does not implement this method");
-        return;
+        return (void *)(-1);
     }
 
     /* Read HTTP request body. Doesn't actually do anything, just clears buffer. */
@@ -101,6 +106,9 @@ void process_request(int clientfd) {
         Rio_writen(clientfd, buf_old, read_bytes);
     }
 
+    Close(clientfd);
+    Close(serverfd);
+    return NULL;
 }
 
 
